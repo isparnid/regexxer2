@@ -1,3 +1,4 @@
+#include <sigc++/sigc++.h>
 /*
  * Copyright (c) 2002-2007  Daniel Elstner  <daniel.kitta@gmail.com>
  *
@@ -33,12 +34,12 @@ public:
   explicit QueuedSignal(int priority = Glib::PRIORITY_HIGH_IDLE);
   virtual ~QueuedSignal();
 
-  sigc::connection connect(const sigc::slot<void>& slot);
+  sigc::connection connect(const sigc::slot<void()>& slot);
   void queue();
   void operator()() { queue(); }
 
 private:
-  sigc::signal<void>  signal_;
+  sigc::signal<void()>  signal_;
   int                 priority_;
   bool                queued_;
 

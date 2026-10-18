@@ -21,7 +21,11 @@
 #ifndef REGEXXER_GLOBALSTRINGS_H_INCLUDED
 #define REGEXXER_GLOBALSTRINGS_H_INCLUDED
 
-#include <glib/gutils.h>  /* for G_DIR_SEPARATOR_S */
+#include <glib.h>  /* for G_DIR_SEPARATOR_S */
+
+#ifndef REGEXXER_PKGDATADIR
+#define REGEXXER_PKGDATADIR "/usr/share/regexxer"
+#endif
 
 namespace Regexxer
 {
@@ -49,11 +53,16 @@ const char *const conf_key_show_line_numbers   = "show-line-numbers";
 const char *const conf_key_highlight_current_line = "highlight-current-line";
 const char *const conf_key_auto_indentation    = "auto-indentation";
 const char *const conf_key_draw_spaces         = "draw-space";
+const char *const conf_key_preferred_language  = "preferred-language";
 
 const char *const ui_mainwindow_filename       = REGEXXER_PKGDATADIR G_DIR_SEPARATOR_S
                                                  "mainwindow.ui";
 const char *const ui_prefdialog_filename       = REGEXXER_PKGDATADIR G_DIR_SEPARATOR_S
                                                  "prefdialog.ui";
+
+#ifndef REGEXXER_PKGDATADIR
+#define REGEXXER_PKGDATADIR "/usr/share/regexxer"
+#endif
 
 } // namespace Regexxer
 

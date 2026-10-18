@@ -22,7 +22,7 @@
 #define REGEXXER_FILESHARED_H_INCLUDED
 
 #include "sharedptr.h"
-
+#include <glibmm/regex.h>
 #include <gtkmm/textbuffer.h>
 #include <functional>
 #include <utility>
@@ -95,7 +95,7 @@ typedef Util::SharedPtr<MatchData> MatchDataPtr;
 /*
  * Sort predicate for use with std::set<>.
  */
-struct MatchDataLess : public std::binary_function<MatchDataPtr, MatchDataPtr, bool>
+struct MatchDataLess
 {
   bool operator()(const MatchDataPtr& a, const MatchDataPtr& b) const
     { return (a->index < b->index); }

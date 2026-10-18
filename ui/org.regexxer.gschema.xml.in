@@ -102,5 +102,11 @@
       <_summary>Draw spaces</_summary>
       <_description>Which type of space to draw in the text view.</_description>
     </key>
+
+    <key name="preferred-language" type="s">
+      <default>''</default>
+      <_summary>Preferred language</_summary>
+      <_description>Language code for the user interface (e.g. fr, de). Empty means system default. Requires a restart.</_description>
+    </key>
   </schema>
 </schemalist>

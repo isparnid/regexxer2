@@ -1,3 +1,4 @@
+#include <sigc++/sigc++.h>
 /*
  * Copyright (c) 2002-2007  Daniel Elstner  <daniel.kitta@gmail.com>
  *
@@ -28,7 +29,7 @@ namespace Gtk
 {
 class Button;
 class ProgressBar;
-class Statusbar;
+class Label;
 }
 
 
@@ -37,7 +38,7 @@ namespace Regexxer
 
 class CounterBox;
 
-class StatusLine : public Gtk::HBox
+class StatusLine : public Gtk::Box
 {
 public:
   StatusLine();
@@ -55,17 +56,25 @@ public:
   void pulse();
   void pulse_stop();
 
-  sigc::signal<void> signal_cancel_clicked;
+  sigc::signal<void()> signal_cancel_clicked;
 
 protected:
   virtual void on_hierarchy_changed(Gtk::Widget* previous_toplevel);
 
-private:
+ private:
   Gtk::Button*        stop_button_;
   Gtk::ProgressBar*   progressbar_;
-  CounterBox*         file_counter_;
-  CounterBox*         match_counter_;
-  Gtk::Statusbar*     statusbar_;
+  Gtk::Label*         file_counter_;
+  Gtk::Label*         match_counter_;
+  Gtk::Label*         status_label_;
+
+  int                 file_index_;
+  int                 file_count_;
+  int                 match_index_;
+  int                 match_count_;
+
+  void update_file_label();
+  void update_match_label();
 };
 
 } // namespace Regexxer

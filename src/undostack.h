@@ -36,13 +36,13 @@ public:
   UndoAction() {}
   virtual ~UndoAction() = 0;
 
-  bool undo(const sigc::slot<bool>& pulse);
+  bool undo(const sigc::slot<bool()>& pulse);
 
 private:
   UndoAction(const UndoAction&);
   UndoAction& operator=(const UndoAction&);
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse) = 0;
+  virtual bool do_undo(const sigc::slot<bool()>& pulse) = 0;
 };
 
 typedef Util::SharedPtr<UndoAction> UndoActionPtr;
@@ -57,12 +57,12 @@ public:
   void push(const UndoActionPtr& action);
   bool empty() const;
 
-  void undo_step(const sigc::slot<bool>& pulse);
+  void undo_step(const sigc::slot<bool()>& pulse);
 
 private:
   std::stack<UndoActionPtr> actions_;
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse);
+  virtual bool do_undo(const sigc::slot<bool()>& pulse);
 };
 
 typedef Util::SharedPtr<UndoStack> UndoStackPtr;

@@ -29,7 +29,11 @@
 #include <sigc++/sigc++.h>
 #include <glibmm/refptr.h>
 #include <glibmm/ustring.h>
+#include <giomm/menu.h>
+#include <giomm/simpleaction.h>
+#include <giomm/simpleactiongroup.h>
 #include <list>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -38,8 +42,12 @@ namespace Gtk
 class Button;
 class CheckButton;
 class Dialog;
+class Box;
+class TextView;
 class Entry;
 class FileChooser;
+class FileChooserNative;
+class FileDialog;
 class Toolbar;
 class Window;
 class ComboBox;
@@ -47,6 +55,9 @@ class ComboBoxText;
 class VBox;
 class ScrolledWindow;
 class Table;
+class Grid;
+class Paned;
+class PopoverMenuBar;
 class EntryCompletion;
 }
 
@@ -54,6 +65,8 @@ namespace Gsv
 {
 class View;
 }
+
+class AboutDialog;
 
 namespace Regexxer
 {
@@ -92,17 +105,20 @@ public:
 private:
   class BusyAction;
 
-  std::auto_ptr<Gtk::Window>  window_;
+  std::unique_ptr<Gtk::Window>  window_;
   Controller                  controller_;
 
-  Gtk::VBox*                  vbox_main_;
+  Gtk::Box*                  vbox_main_;
+  Gtk::PopoverMenuBar*       menubar_;
+  Glib::RefPtr<Gio::Menu>    menu_model_;
+  std::map<Glib::ustring, Glib::RefPtr<Gio::SimpleAction>> actions_;
 
-  Gtk::Toolbar*               toolbar_;
+  Gtk::Box*                  toolbar_;
 
-  Gtk::Table*                 table_file_;
-  Gtk::FileChooser*           button_folder_;
+  Gtk::ComboBoxText*          combobox_folder_;
+  Gtk::Entry*                 entry_folder_;
 
-  Gtk::ComboBoxText*          combo_entry_pattern_;
+  Gtk::Entry*                 entry_pattern_;
 
   Gtk::CheckButton*           button_recursive_;
   Gtk::CheckButton*           button_hidden_;
@@ -123,7 +139,7 @@ private:
   FileTree*                   filetree_;
   Gtk::ScrolledWindow*        scrollwin_filetree_;
   Gtk::ScrolledWindow*        scrollwin_textview_;
-  Gsv::View*            textview_;
+  Gtk::TextView*            textview_;
   Gtk::Entry*                 entry_preview_;
 
   StatusLine*                 statusline_;
@@ -136,22 +152,30 @@ private:
 
   std::list<sigc::connection> buffer_connections_;
 
-  std::auto_ptr<Gtk::Dialog>  about_dialog_;
-  std::auto_ptr<PrefDialog>   pref_dialog_;
+  std::unique_ptr<Gtk::Window>  about_dialog_;
+  std::unique_ptr<PrefDialog>   pref_dialog_;
+  Glib::RefPtr<Gtk::FileDialog> folder_dialog_;
 
   void load_xml();
+  void build_menubar();
+  void register_action(const Glib::ustring& name, ControlItem& item,
+                       const Glib::ustring& accel = {});
+  Glib::RefPtr<Gio::SimpleActionGroup> action_group_;
   void connect_signals();
   bool autorun_idle();
   void save_window_state();
 
   void on_hide();
-  void on_style_updated();
-  bool on_delete_event(GdkEventAny* event);
+  // GTK4 port: style updates are handled by the theme engine.
+  // void on_style_updated();
+  // GTK4 port: close handling is done via on_close_request().
+  // bool on_delete_event(GdkEvent* event);
 
-  void on_cut();
-  void on_copy();
-  void on_paste();
-  void on_erase();
+  // GTK4 port: clipboard actions are handled by the TextView itself.
+  // void on_cut();
+  // void on_copy();
+  // void on_paste();
+  // void on_erase();
 
   void on_quit();
   bool confirm_quit_request();
@@ -185,7 +209,7 @@ private:
 
   void on_entry_pattern_changed();
   void update_preview();
-  void set_title_filename(const std::string& filename);
+  void set_title_filename(const Glib::ustring& filename = Glib::ustring());
 
   void busy_action_enter();
   void busy_action_leave();
@@ -194,13 +218,18 @@ private:
 
   void on_about();
   void on_about_dialog_response(int);
+  void on_about_dialog_hide();
 
   void on_preferences();
   void on_pref_dialog_hide();
 
+  void on_config_changed(const std::string& key);
+  void on_select_folder();
+  void on_folder_dialog_done(const Glib::RefPtr<Gio::AsyncResult>& result);
+  bool on_close_request();
+
   void on_conf_value_changed(const Glib::ustring& key);
 };
-
 } // namespace Regexxer
 
 #endif /* REGEXXER_MAINWINDOW_H_INCLUDED */

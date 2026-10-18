@@ -1,0 +1,3 @@
+/home/daniel/regexxer2/build/CMakeFiles/regexxer2.dir
+/home/daniel/regexxer2/build/CMakeFiles/edit_cache.dir
+/home/daniel/regexxer2/build/CMakeFiles/rebuild_cache.dir

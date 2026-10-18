@@ -26,7 +26,7 @@
 #include <glib.h>
 #include <glibmm.h>
 #include <giomm.h>
-#include <gtksourceviewmm.h> 
+/*#include <gtksourceviewmm.h>*/ 
 #include <cstring>
 
 namespace
@@ -45,15 +45,15 @@ Glib::RefPtr<FileBuffer> load_iochannel(const Glib::RefPtr<Glib::IOChannel>& inp
   const Util::ScopedArray<char> inbuf (new char[BUFSIZE]);
   gsize bytes_read = 0;
 
-  text_buffer->begin_not_undoable_action();
-  while (input->read(inbuf.get(), BUFSIZE, bytes_read) == Glib::IO_STATUS_NORMAL)
+  text_buffer->begin_irreversible_action();
+  while (input->read(inbuf.get(), BUFSIZE, bytes_read) == Glib::IOStatus::NORMAL)
   {
     if (std::memchr(inbuf.get(), '\0', bytes_read)) // binary file?
       throw Regexxer::ErrorBinaryFile();
 
     text_end = text_buffer->insert(text_end, inbuf.get(), inbuf.get() + bytes_read);
   }
-  text_buffer->end_not_undoable_action();
+  text_buffer->end_irreversible_action();
 
   g_assert(bytes_read == 0);
 
@@ -75,7 +75,7 @@ void save_iochannel(const Glib::RefPtr<Glib::IOChannel>& output, const Glib::Ref
 
     // These conditions really must hold true at this point
     // since any error should have caused an exception.
-    g_assert(status == Glib::IO_STATUS_NORMAL);
+    g_assert(status == Glib::IOStatus::NORMAL);
     g_assert(bytes_written == chunk.bytes());
   }
 }
@@ -157,13 +157,14 @@ void load_file(const FileInfoPtr& fileinfo, const std::string& fallback_encoding
   if (!buffer)
     throw ErrorBinaryFile();
 
-  Glib::RefPtr<Gsv::LanguageManager> language_manager = Gsv::LanguageManager::create();
-  
   bool uncertain = false;
   std::string content_type = Gio::content_type_guess(fileinfo->fullname, buffer->get_text(), uncertain);
 
-  buffer->set_highlight_syntax(true);
-  buffer->set_language(language_manager->guess_language(fileinfo->fullname, content_type));
+  /* Syntax highlighting disabled for GTK4 migration */
+  // Glib::RefPtr<Gsv::LanguageManager> language_manager = Gsv::LanguageManager::create();
+  // buffer->set_highlight_syntax(true);
+  // buffer->set_language(language_manager->guess_language(fileinfo->fullname, content_type));
+
   buffer->set_modified(false);
 
   fileinfo->encoding    = encoding;

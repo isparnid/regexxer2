@@ -1,3 +1,4 @@
+#include <sigc++/sigc++.h>
 /*
  * Copyright (c) 2002-2007  Daniel Elstner  <daniel.kitta@gmail.com>
  *
@@ -23,6 +24,7 @@
 
 #include <sigc++/sigc++.h>
 #include <glibmm/refptr.h>
+#include <giomm/simpleaction.h>
 
 
 namespace Gtk
@@ -43,11 +45,12 @@ public:
   virtual ~ControlItem();
 
   void activate();
-  sigc::slot<void> slot();
+  sigc::slot<void()> slot();
 
-  void connect(const sigc::slot<void>& slot_activated);
+  void connect(const sigc::slot<void()>& slot_activated);
 
   void add_widget(Gtk::Widget& widget);
+  void add_widget_action(const Glib::RefPtr<Gio::SimpleAction>& action);
   void add_widgets(const Glib::RefPtr<Gtk::Builder>& xml,
                    const char* menuitem_name, const char* button_name);
 
@@ -56,8 +59,8 @@ public:
   bool is_enabled() const;
 
 private:
-  sigc::signal<void>       signal_activate_;
-  sigc::signal<void, bool> signal_set_sensitive_;
+  sigc::signal<void()>       signal_activate_;
+  sigc::signal<void(bool)> signal_set_sensitive_;
   bool                     enabled_;
   bool                     group_enabled_;
 
@@ -76,7 +79,7 @@ public:
   void set_enabled(bool enable);
 
 private:
-  sigc::signal<void, bool> signal_set_enabled_;
+  sigc::signal<void(bool)> signal_set_enabled_;
   bool                     enabled_;
 
   ControlGroup(const ControlGroup&);

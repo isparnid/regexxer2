@@ -52,7 +52,7 @@ private:
   Glib::ustring text_;
   int           offset_;
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse);
+  virtual bool do_undo(const sigc::slot<bool()>& pulse);
 };
 
 class FileBufferActionErase : public FileBufferAction
@@ -65,7 +65,7 @@ private:
   Glib::ustring text_;
   int           offset_;
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse);
+  virtual bool do_undo(const sigc::slot<bool()>& pulse);
 };
 
 class FileBufferActionRemoveMatch : public FileBufferAction
@@ -80,7 +80,7 @@ private:
   MatchDataPtr  match_;
   int           offset_;
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse);
+  virtual bool do_undo(const sigc::slot<bool()>& pulse);
 };
 
 } // namespace Regexxer

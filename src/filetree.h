@@ -26,11 +26,12 @@
 #include "signalutils.h"
 #include "undostack.h"
 
-#include <gdkmm/color.h>
+#include <gdkmm/rgba.h>
 #include <gdkmm/pixbuf.h>
 #include <gtkmm/treemodel.h>
 #include <gtkmm/treeview.h>
 #include <list>
+#include <stack>
 
 namespace Gtk   { class TreeStore; }
 namespace Glib  { class Regex; }
@@ -65,19 +66,18 @@ public:
 
   int get_modified_count() const;
 
-  sigc::signal<void, FileInfoPtr, int>  signal_switch_buffer;
-  sigc::signal<void>                    signal_bound_state_changed;
-  sigc::signal<void>                    signal_file_count_changed;
-  sigc::signal<void>                    signal_match_count_changed;
-  sigc::signal<void>                    signal_modified_count_changed;
-  sigc::signal<bool>                    signal_pulse;
-  sigc::signal<void, UndoActionPtr>     signal_undo_stack_push;
+  sigc::signal<void(FileInfoPtr, int)>  signal_switch_buffer;
+  sigc::signal<void()>                    signal_bound_state_changed;
+  sigc::signal<void()>                    signal_file_count_changed;
+  sigc::signal<void()>                    signal_match_count_changed;
+  sigc::signal<void()>                    signal_modified_count_changed;
+  sigc::signal<bool()>                    signal_pulse;
+  sigc::signal<void(UndoActionPtr)>       signal_undo_stack_push;
 
   // Provide line number, subject and file info for match location output.
-  sigc::signal<void, int, const Glib::ustring&, FileInfoPtr> signal_feedback;
+  sigc::signal<void(int, const Glib::ustring&, FileInfoPtr)> signal_feedback;
 
 protected:
-  virtual void on_style_updated();
 
 private:
   class  TreeRowRef;
@@ -97,8 +97,8 @@ private:
   Glib::RefPtr<Gdk::Pixbuf>     pixbuf_file_;
   Glib::RefPtr<Gdk::Pixbuf>     pixbuf_load_failed_;
 
-  Gdk::Color                    color_modified_;
-  Gdk::Color                    color_load_failed_;
+  Gdk::RGBA                    color_modified_;
+  Gdk::RGBA                    color_load_failed_;
 
   TreeRowRefPtr                 last_selected_rowref_;
   FileInfoPtr                   last_selected_;
@@ -115,8 +115,8 @@ private:
 
   std::string                   fallback_encoding_;
 
-  void icon_cell_data_func(Gtk::CellRenderer* cell, const Gtk::TreeModel::iterator& iter);
-  void text_cell_data_func(Gtk::CellRenderer* cell, const Gtk::TreeModel::iterator& iter);
+  void icon_cell_data_func(Gtk::CellRenderer* cell, const Gtk::TreeModel::const_iterator& iter);
+  void text_cell_data_func(Gtk::CellRenderer* cell, const Gtk::TreeModel::const_iterator& iter);
 
   static bool select_func(const Glib::RefPtr<Gtk::TreeModel>& model,
                           const Gtk::TreeModel::Path& path, bool currently_selected);
@@ -128,7 +128,7 @@ private:
   void find_increment_file_count(FindData& find_data, int file_count);
 
   bool save_file_at_iter(const Gtk::TreeModel::iterator& iter,
-                         const Util::SharedPtr<MessageList>& error_list);
+                         Util::SharedPtr<MessageList>& error_list);
 
   bool find_matches_at_path_iter(const Gtk::TreeModel::Path& path,
                                  const Gtk::TreeModel::iterator& iter,
@@ -154,7 +154,7 @@ private:
 
   void load_file_with_fallback(const Gtk::TreeModel::iterator& iter, const FileInfoPtr& fileinfo);
 
-  void on_conf_value_changed(const Glib::ustring& key);
+  void on_settings_changed(const std::string& key);
 };
 
 class FileTree::Error

@@ -1,38 +1,62 @@
-/*
- * Copyright (c) 2002-2007  Daniel Elstner  <daniel.kitta@gmail.com>
+/* $Id$
  *
- * This file is part of regexxer.
+ * Copyright (c) 2004  Daniel Elstner  <daniel.elstner@gmx.net>
  *
- * regexxer is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License VERSION 2 as
+ * published by the Free Software Foundation.  You are not allowed to
+ * use any other version of the license; unless you got the explicit
+ * permission from the author to do so.
  *
- * regexxer is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with regexxer; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "mainwindow.h"
+#include "aboutdialog.h"
+#include "debug.h"
 #include "filetree.h"
 #include "globalstrings.h"
+#include "gtk4compat.h"
+#include <glibmm/regex.h>
+#include <giomm/file.h>
 #include "prefdialog.h"
 #include "statusline.h"
+#include "settings.h"
+#include "appsettings.h"
+#include "appconfig.h"
 #include "stringutils.h"
 #include "translation.h"
-#include "settings.h"
 
 #include <glib.h>
-#include <gtkmm.h>
-#include <gtksourceviewmm.h>
+#include <gtkmm/applicationwindow.h>
+#include <gtkmm/box.h>
+#include <gtkmm/button.h>
+#include <gtkmm/checkbutton.h>
+#include <gtkmm/comboboxtext.h>
+#include <gtkmm/cssprovider.h>
+#include <gtkmm/dialog.h>
+#include <gtkmm/entry.h>
+#include <gtkmm/filedialog.h>
+#include <gtkmm/frame.h>
+#include <gtkmm/grid.h>
+#include <gtkmm/label.h>
+#include <gtkmm/paned.h>
+#include <gtkmm/popovermenubar.h>
+#include <gtkmm/scrolledwindow.h>
+#include <gtkmm/separator.h>
+#include <gtkmm/textview.h>
+#include <gtkmm/window.h>
+#include <giomm/menu.h>
+#include <giomm/simpleaction.h>
 #include <algorithm>
 #include <functional>
-#include <iostream>
 
 #include <config.h>
 
@@ -43,32 +67,10 @@ enum { BUSY_GUI_UPDATE_INTERVAL = 16 };
 
 typedef Glib::RefPtr<Regexxer::FileBuffer> FileBufferPtr;
 
-static const char *const selection_clipboard = "CLIPBOARD";
-
-/*
- * List of authors to be displayed in the about dialog.
- */
-static const char *const program_authors[] =
+bool matches_config_key(const std::string& key_name, const std::string& expected_key)
 {
-  "Daniel Elstner <daniel.kitta@gmail.com>",
-  "Murray Cumming <murrayc@murrayc.com>",
-  0
-};
-
-static const char *const program_license =
-  "regexxer is free software; you can redistribute it and/or modify "
-  "it under the terms of the GNU General Public License as published by "
-  "the Free Software Foundation; either version 2 of the License, or "
-  "(at your option) any later version.\n"
-  "\n"
-  "regexxer is distributed in the hope that it will be useful, "
-  "but WITHOUT ANY WARRANTY; without even the implied warranty of "
-  "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the "
-  "GNU General Public License for more details.\n"
-  "\n"
-  "You should have received a copy of the GNU General Public License "
-  "along with regexxer; if not, write to the Free Software Foundation, "
-  "Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA\n";
+  return key_name == expected_key;
+}
 
 class FileErrorDialog : public Gtk::MessageDialog
 {
@@ -81,81 +83,27 @@ public:
 FileErrorDialog::FileErrorDialog(Gtk::Window& parent, const Glib::ustring& message,
                                  Gtk::MessageType type, const Regexxer::FileTree::Error& error)
 :
-  Gtk::MessageDialog(parent, message, false, type, Gtk::BUTTONS_OK, true)
+  Gtk::MessageDialog(parent, message, false, type, Gtk::ButtonsType::OK, true)
 {
-  using namespace Gtk;
-
-  const Glib::RefPtr<TextBuffer> buffer = TextBuffer::create();
-  TextBuffer::iterator buffer_end = buffer->end();
-
   typedef std::list<Glib::ustring> ErrorList;
   const ErrorList& error_list = error.get_error_list();
+  Glib::ustring details;
 
   for (ErrorList::const_iterator perr = error_list.begin(); perr != error_list.end(); ++perr)
-    buffer_end = buffer->insert(buffer_end, *perr + '\n');
+    details += *perr + '\n';
 
-  Box& box = *get_vbox();
-  Frame *const frame = new Frame();
-  box.pack_start(*manage(frame), PACK_EXPAND_WIDGET);
-  frame->set_border_width(6); // HIG spacing
-  frame->set_shadow_type(SHADOW_IN);
-
-  ScrolledWindow *const scrollwin = new ScrolledWindow();
-  frame->add(*manage(scrollwin));
-  scrollwin->set_policy(POLICY_AUTOMATIC, POLICY_AUTOMATIC);
-
-  TextView *const textview = new TextView(buffer);
-  scrollwin->add(*manage(textview));
-  textview->set_editable(false);
-  textview->set_cursor_visible(false);
-  textview->set_wrap_mode(WRAP_WORD);
-  textview->set_pixels_below_lines(8);
-
-  set_default_size(400, 250);
-  frame->show_all();
+  set_secondary_text(details);
+  set_default_size(520, 300);
 }
 
 FileErrorDialog::~FileErrorDialog()
 {}
 
-static
-void print_location(int linenumber, const Glib::ustring& subject, Regexxer::FileInfoPtr fileinfo)
-{
-  std::cout << fileinfo->fullname << ':' << linenumber + 1 << ':';
-
-  std::string charset;
-
-  if (Glib::get_charset(charset))
-    std::cout << subject.raw(); // charset is UTF-8
-  else
-    std::cout << Glib::convert_with_fallback(subject.raw(), charset, "UTF-8");
-
-  std::cout << std::endl;
-}
-
 } // anonymous namespace
+
 
 namespace Regexxer
 {
-
-/**** Regexxer::InitState **************************************************/
-
-InitState::InitState()
-:
-  folder        (),
-  pattern       (),
-  regex         (),
-  substitution  (),
-  no_recursive  (false),
-  hidden        (false),
-  no_global     (false),
-  ignorecase    (false),
-  feedback      (false),
-  no_autorun    (false)
-{}
-
-InitState::~InitState()
-{}
 
 /**** Regexxer::MainWindow::BusyAction *************************************/
 
@@ -174,30 +122,26 @@ public:
   ~BusyAction() { object_.busy_action_leave(); }
 };
 
+
 /**** Regexxer::MainWindow *************************************************/
 
 MainWindow::MainWindow()
 :
+  vbox_main_              (0),
+  menubar_                (0),
   toolbar_                (0),
-  table_file_             (0),
-  button_folder_          (0),
-  combo_entry_pattern_    (Gtk::manage(new Gtk::ComboBoxText(true))),
+  entry_folder_           (0),
+  entry_pattern_          (0),
   button_recursive_       (0),
   button_hidden_          (0),
   entry_regex_            (0),
-  entry_regex_completion_stack_(10, Settings::instance()->get_string_array(conf_key_regex_patterns)),
-  entry_regex_completion_ (Gtk::EntryCompletion::create()),
   entry_substitution_     (0),
-  entry_substitution_completion_stack_(10, Settings::instance()->get_string_array(conf_key_substitution_patterns)),
-  entry_substitution_completion_ (Gtk::EntryCompletion::create()),
   button_multiple_        (0),
   button_caseless_        (0),
-  filetree_               (Gtk::manage(new FileTree())),
-  scrollwin_filetree_     (0),
-  scrollwin_textview_     (0),
-  textview_               (Gtk::manage(new Gsv::View())),
+  filetree_               (0),
+  textview_               (0),
   entry_preview_          (0),
-  statusline_             (Gtk::manage(new StatusLine())),
+  statusline_             (0),
   busy_action_running_    (false),
   busy_action_cancel_     (false),
   busy_action_iteration_  (0),
@@ -205,144 +149,309 @@ MainWindow::MainWindow()
 {
   load_xml();
 
-  entry_regex_ = comboboxentry_regex_->get_entry();
-  entry_substitution_ = comboboxentry_substitution_->get_entry();
-
   textview_->set_buffer(FileBuffer::create());
-  window_->set_title(PACKAGE_NAME);
+  set_title_filename();
 
-  vbox_main_->pack_start(*statusline_, Gtk::PACK_SHRINK);
-  scrollwin_filetree_->add(*filetree_);
-  table_file_->attach(*combo_entry_pattern_, 1, 2, 1, 2, Gtk::EXPAND | Gtk::FILL, Gtk::FILL);
-
-  scrollwin_textview_->add(*textview_);
-
-  statusline_->show_all();
-  filetree_->show_all();
-  combo_entry_pattern_->show_all();
-  scrollwin_textview_->show_all();
+  entry_folder_->set_text(Util::shorten_pathname(
+      Util::filename_to_utf8_fallback(Glib::get_current_dir())));
 
   connect_signals();
+  on_config_changed(AppConfig::modern_key_name(AppConfig::textview_font));
+
+  entry_pattern_->set_text("*");
 }
 
 MainWindow::~MainWindow()
 {}
 
-void MainWindow::initialize(const InitState& init)
+/**** Regexxer::MainWindow -- private **************************************/
+
+void MainWindow::register_action(const Glib::ustring& name, ControlItem& item,
+                                 const Glib::ustring& accel)
 {
-  Glib::RefPtr<Gio::Settings> settings = Settings::instance();
-  int width = settings->get_int(conf_key_window_width);
-  int height = settings->get_int(conf_key_window_height);
-
-  int x = settings->get_int(conf_key_window_position_x);
-  int y = settings->get_int(conf_key_window_position_y);
-
-  bool maximized = settings->get_boolean(conf_key_window_maximized);
-
-  window_->resize(width, height);
-  window_->move(x, y);
-  if (maximized)
-    window_->maximize();
-
-  textview_->set_show_line_numbers(settings->get_boolean(conf_key_show_line_numbers));
-  textview_->set_highlight_current_line(settings->get_boolean(conf_key_highlight_current_line));
-  textview_->set_auto_indent(settings->get_boolean(conf_key_auto_indentation));
-  textview_->set_draw_spaces(static_cast<Gsv::DrawSpacesFlags>
-                              (settings->get_flags(conf_key_draw_spaces)));
-
-  std::string folder;
-
-  if (!init.folder.empty())
-    folder = init.folder.front();
-  if (!Glib::path_is_absolute(folder))
-    folder = Glib::build_filename(Glib::get_current_dir(), folder);
-
-  const bool folder_exists = button_folder_->set_current_folder(folder);
-
-  combo_entry_pattern_->get_entry()->set_text((init.pattern.empty()) ? Glib::ustring(1, '*') : init.pattern);
-
-  entry_regex_->set_text(init.regex);
-  entry_regex_->set_completion(entry_regex_completion_);
-  entry_substitution_->set_text(init.substitution);
-  entry_substitution_->set_completion(entry_substitution_completion_);
-
-  comboboxentry_regex_->set_model(entry_regex_completion_stack_.get_completion_model());
-  comboboxentry_regex_->set_entry_text_column(entry_regex_completion_stack_.get_completion_column());
-  comboboxentry_substitution_->set_model(entry_substitution_completion_stack_.get_completion_model());
-  comboboxentry_substitution_->set_entry_text_column(entry_substitution_completion_stack_.get_completion_column());
-
-  entry_regex_completion_->set_model(entry_regex_completion_stack_.get_completion_model());
-  entry_regex_completion_->set_text_column(entry_regex_completion_stack_.get_completion_column());
-  entry_regex_completion_->set_inline_completion(true);
-  entry_regex_completion_->set_popup_completion(false);
-
-  entry_substitution_completion_->set_model(entry_substitution_completion_stack_.get_completion_model());
-  entry_substitution_completion_->set_text_column(entry_substitution_completion_stack_.get_completion_column());
-  entry_substitution_completion_->set_inline_completion(true);
-  entry_substitution_completion_->set_popup_completion(false);
-
-  button_recursive_->set_active(!init.no_recursive);
-  button_hidden_   ->set_active(init.hidden);
-  button_multiple_ ->set_active(!init.no_global);
-  button_caseless_ ->set_active(init.ignorecase);
-
-  combo_entry_pattern_->set_entry_text_column(0);
-  const std::list<Glib::ustring> patterns =
-      settings->get_string_array(conf_key_files_patterns);
-  for (std::list<Glib::ustring>::const_iterator pattern = patterns.begin();
-       pattern != patterns.end();
-       ++pattern)
+  auto action = Gio::SimpleAction::create(name);
+  action->signal_activate().connect(
+      [slot = item.slot()](const Glib::VariantBase&) { slot(); });
+  item.add_widget_action(action);
+  actions_[name] = action;
+  action_group_->add_action(action);
+  if (!accel.empty())
   {
-    combo_entry_pattern_->append(*pattern);
-  }
-
-  if (init.feedback)
-    filetree_->signal_feedback.connect(&print_location);
-
-  Glib::RefPtr<Gtk::StyleContext> style_context =
-      toolbar_->get_style_context ();
-  if (style_context)
-  {
-    style_context->add_class (GTK_STYLE_CLASS_PRIMARY_TOOLBAR);
-  }
-
-  // Strangely, folder_exists seems to be always true, probably because the
-  // file chooser works asynchronously but the GLib main loop isn't running
-  // yet.  As a work-around, explicitely check whether the directory exists
-  // on the file system as well.
-  if (folder_exists && !init.no_autorun
-      && !init.folder.empty() && !init.pattern.empty()
-      && Glib::file_test(folder, Glib::FILE_TEST_IS_DIR))
-  {
-    Glib::signal_idle().connect(sigc::mem_fun(*this, &MainWindow::autorun_idle));
+    if (auto app = window_->get_application())
+      app->set_accel_for_action(Glib::ustring("win.") + name, accel);
   }
 }
 
-/**** Regexxer::MainWindow -- private **************************************/
+void MainWindow::build_menubar()
+{
+  // Classic menus from the screenshot / historic mainwindow.ui.
+  // Labels reuse historic msgids so po/*.po keeps applying.
+  menu_model_ = Gio::Menu::create();
+  action_group_ = Gio::SimpleActionGroup::create();
+  window_->insert_action_group("win", action_group_);
+
+  register_action("save",         controller_.save_file,   "<Primary>s");
+  register_action("save-all",     controller_.save_all);
+  register_action("quit",         controller_.quit,        "<Primary>q");
+  register_action("undo",         controller_.undo,        "<Primary>z");
+  register_action("cut",          controller_.cut,         "<Primary>x");
+  register_action("copy",         controller_.copy,        "<Primary>c");
+  register_action("paste",        controller_.paste,       "<Primary>v");
+  register_action("erase",        controller_.erase,       "Delete");
+  register_action("preferences",  controller_.preferences);
+  register_action("prev-file",    controller_.prev_file,   "<Primary>p");
+  register_action("prev-match",   controller_.prev_match,  "<Primary>b");
+  register_action("next-match",   controller_.next_match,  "<Primary>n");
+  register_action("next-file",    controller_.next_file,   "<Primary>e");
+  register_action("replace",      controller_.replace,     "<Primary>r");
+  register_action("replace-file", controller_.replace_file);
+  register_action("replace-all",  controller_.replace_all);
+  register_action("about",        controller_.about);
+
+  auto file_menu = Gio::Menu::create();
+  file_menu->append(_("Save"), "win.save");
+  file_menu->append(_("Save all"), "win.save-all");
+  file_menu->append(_("Quit"), "win.quit");
+
+  auto edit_menu = Gio::Menu::create();
+  edit_menu->append(_("Undo"), "win.undo");
+  edit_menu->append(_("Cut"), "win.cut");
+  edit_menu->append(_("Copy"), "win.copy");
+  edit_menu->append(_("Paste"), "win.paste");
+  edit_menu->append(_("Delete"), "win.erase");
+  edit_menu->append(_("Preferences"), "win.preferences");
+
+  auto match_menu = Gio::Menu::create();
+  match_menu->append(_("File backward"), "win.prev-file");
+  match_menu->append(_("Backward"), "win.prev-match");
+  match_menu->append(_("Forward"), "win.next-match");
+  match_menu->append(_("File forward"), "win.next-file");
+  match_menu->append(_("Replace"), "win.replace");
+  match_menu->append(_("This file"), "win.replace-file");
+  match_menu->append(_("All files"), "win.replace-all");
+
+  auto help_menu = Gio::Menu::create();
+  help_menu->append(_("About"), "win.about");
+
+  menu_model_->append_submenu(_("File"), file_menu);
+  menu_model_->append_submenu(_("Edit"), edit_menu);
+  menu_model_->append_submenu(_("Match"), match_menu);
+  menu_model_->append_submenu(_("Help"), help_menu);
+
+  menubar_ = Gtk::make_managed<Gtk::PopoverMenuBar>(menu_model_);
+  menubar_->set_hexpand(true);
+  vbox_main_->append(*menubar_);
+}
 
 void MainWindow::load_xml()
 {
-  const Glib::RefPtr<Gtk::Builder> xml = Gtk::Builder::create_from_file(ui_mainwindow_filename);
+  window_.reset(new Gtk::Window());
+  window_->set_title(PACKAGE_NAME);
+  window_->set_default_size(980, 680);
 
-  Gtk::Window* mainwindow = 0;
-  xml->get_widget("mainwindow", mainwindow);
-  window_.reset(mainwindow);
+  vbox_main_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 0);
+  window_->set_child(*vbox_main_);
 
-  xml->get_widget("toolbar",             toolbar_);
-  xml->get_widget("button_folder",       button_folder_);
-  xml->get_widget("button_recursive",    button_recursive_);
-  xml->get_widget("button_hidden",       button_hidden_);
-  xml->get_widget("comboboxentry_regex",         comboboxentry_regex_);
-  xml->get_widget("comboboxentry_substitution",  comboboxentry_substitution_);
-  xml->get_widget("button_multiple",     button_multiple_);
-  xml->get_widget("button_caseless",     button_caseless_);
-  xml->get_widget("scrollwin_textview",  scrollwin_textview_);
-  xml->get_widget("entry_preview",       entry_preview_);
-  xml->get_widget("vbox_main",           vbox_main_);
-  xml->get_widget("scrollwin_filetree",  scrollwin_filetree_);
-  xml->get_widget("table_file",          table_file_);
+  build_menubar();
 
-  controller_.load_xml(xml);
+  toolbar_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 4);
+  toolbar_->set_margin(4);
+  vbox_main_->append(*toolbar_);
+
+  const auto add_toolbar_button = [this](const Glib::ustring& label, ControlItem& item)
+  {
+    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label);
+    toolbar_->append(*button);
+    item.add_widget(*button);
+    button->signal_clicked().connect(item.slot());
+  };
+
+  add_toolbar_button(_("Save"), controller_.save_file);
+  add_toolbar_button(_("Save all"), controller_.save_all);
+  toolbar_->append(*Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::VERTICAL));
+  add_toolbar_button(_("Undo"), controller_.undo);
+  toolbar_->append(*Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::VERTICAL));
+  add_toolbar_button(_("Quit"), controller_.quit);
+
+  Gtk::Paned* const work_area = Gtk::make_managed<Gtk::Paned>(Gtk::Orientation::HORIZONTAL);
+  work_area->set_vexpand(true);
+  work_area->set_hexpand(true);
+  vbox_main_->append(*work_area);
+
+  // ---- Left pane (historic vbox_left): Dossier/Motif + file list ----
+  Gtk::Box* const vbox_left = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
+  vbox_left->set_margin(6);
+  work_area->set_start_child(*vbox_left);
+  work_area->set_position(340);
+
+  Gtk::Grid* const table_file = Gtk::make_managed<Gtk::Grid>();
+  table_file->set_column_spacing(6);
+  table_file->set_row_spacing(6);
+  vbox_left->append(*table_file);
+
+  Gtk::Label* const label_folder = Gtk::make_managed<Gtk::Label>(_("Fol_der:"), true);
+  label_folder->set_halign(Gtk::Align::START);
+  table_file->attach(*label_folder, 0, 0);
+
+  combobox_folder_ = Gtk::make_managed<Gtk::ComboBoxText>(true);
+  combobox_folder_->set_hexpand(true);
+  table_file->attach(*combobox_folder_, 1, 0);
+  entry_folder_ = combobox_folder_->get_entry();
+  label_folder->set_mnemonic_widget(*combobox_folder_);
+
+  Gtk::Button* const folder_button = Gtk::make_managed<Gtk::Button>(_("Browse…"));
+  table_file->attach(*folder_button, 2, 0);
+  folder_button->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_select_folder));
+
+  Gtk::Label* const label_pattern = Gtk::make_managed<Gtk::Label>(_("Pattern:"));
+  label_pattern->set_halign(Gtk::Align::START);
+  table_file->attach(*label_pattern, 0, 1);
+
+  entry_pattern_ = Gtk::make_managed<Gtk::Entry>();
+  entry_pattern_->set_hexpand(true);
+  entry_pattern_->set_tooltip_text(_("Find all files that match the filename pattern"));
+  table_file->attach(*entry_pattern_, 1, 1, 2, 1);
+  label_pattern->set_mnemonic_widget(*entry_pattern_);
+
+  Gtk::Box* const options_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 3);
+  table_file->attach(*options_box, 0, 2);
+
+  button_recursive_ = Gtk::make_managed<Gtk::CheckButton>(_("recursive"), true);
+  button_recursive_->set_active(true);
+  button_recursive_->set_tooltip_text(_("Recurse into subdirectories"));
+  options_box->append(*button_recursive_);
+
+  button_hidden_ = Gtk::make_managed<Gtk::CheckButton>(_("hidden"), true);
+  button_hidden_->set_tooltip_text(_("Also find hidden files"));
+  options_box->append(*button_hidden_);
+
+  Gtk::Button* const find_files_button = Gtk::make_managed<Gtk::Button>(_("Find fi_les"), true);
+  find_files_button->set_halign(Gtk::Align::END);
+  find_files_button->set_hexpand(true);
+  controller_.find_files.add_widget(*find_files_button);
+  find_files_button->signal_clicked().connect(controller_.find_files.slot());
+  table_file->attach(*find_files_button, 1, 2, 2, 1);
+
+  Gtk::Frame* const frame_filetree = Gtk::make_managed<Gtk::Frame>();
+  frame_filetree->set_vexpand(true);
+  frame_filetree->set_hexpand(true);
+  vbox_left->append(*frame_filetree);
+
+  scrollwin_filetree_ = Gtk::make_managed<Gtk::ScrolledWindow>();
+  scrollwin_filetree_->set_vexpand(true);
+  frame_filetree->set_child(*scrollwin_filetree_);
+
+  filetree_ = Gtk::make_managed<FileTree>();
+  scrollwin_filetree_->set_child(*filetree_);
+
+  // ---- Right pane (historic vbox_right): Search/Replace + editor ----
+  Gtk::Box* const vbox_right = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 6);
+  vbox_right->set_margin(6);
+  work_area->set_end_child(*vbox_right);
+
+  Gtk::Grid* const table_regex = Gtk::make_managed<Gtk::Grid>();
+  table_regex->set_column_spacing(6);
+  table_regex->set_row_spacing(6);
+  vbox_right->append(*table_regex);
+
+  Gtk::Label* const label_search = Gtk::make_managed<Gtk::Label>(_("Search:"), true);
+  label_search->set_halign(Gtk::Align::START);
+  table_regex->attach(*label_search, 0, 0);
+
+  comboboxentry_regex_ = Gtk::make_managed<Gtk::ComboBoxText>(true);
+  comboboxentry_regex_->set_hexpand(true);
+  comboboxentry_regex_->set_tooltip_text(_("A regular expression in Perl syntax"));
+  table_regex->attach(*comboboxentry_regex_, 1, 0);
+  entry_regex_ = comboboxentry_regex_->get_entry();
+  label_search->set_mnemonic_widget(*comboboxentry_regex_);
+
+  Gtk::Box* const flags_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
+  table_regex->attach(*flags_box, 2, 0);
+
+  button_multiple_ = Gtk::make_managed<Gtk::CheckButton>("/g");
+  button_multiple_->set_active(true);
+  button_multiple_->set_tooltip_text(_("Find all possible matches in a line"));
+  flags_box->append(*button_multiple_);
+
+  button_caseless_ = Gtk::make_managed<Gtk::CheckButton>("/i");
+  button_caseless_->set_tooltip_text(_("Do case insensitive matching"));
+  flags_box->append(*button_caseless_);
+
+  Gtk::Label* const label_replace = Gtk::make_managed<Gtk::Label>(_("Replace:"), true);
+  label_replace->set_halign(Gtk::Align::START);
+  table_regex->attach(*label_replace, 0, 1);
+
+  comboboxentry_substitution_ = Gtk::make_managed<Gtk::ComboBoxText>(true);
+  comboboxentry_substitution_->set_hexpand(true);
+  comboboxentry_substitution_->set_tooltip_text(_("Replacement string"));
+  table_regex->attach(*comboboxentry_substitution_, 1, 1);
+  entry_substitution_ = comboboxentry_substitution_->get_entry();
+  label_replace->set_mnemonic_widget(*comboboxentry_substitution_);
+
+  Gtk::Button* const find_matches_button = Gtk::make_managed<Gtk::Button>(_("Search"));
+  find_matches_button->set_tooltip_text(_("Find all matches of the regular expression"));
+  controller_.find_matches.add_widget(*find_matches_button);
+  find_matches_button->signal_clicked().connect(controller_.find_matches.slot());
+  table_regex->attach(*find_matches_button, 2, 1);
+
+  Gtk::Frame* const frame_textview = Gtk::make_managed<Gtk::Frame>();
+  frame_textview->set_vexpand(true);
+  frame_textview->set_hexpand(true);
+  vbox_right->append(*frame_textview);
+
+  scrollwin_textview_ = Gtk::make_managed<Gtk::ScrolledWindow>();
+  scrollwin_textview_->set_vexpand(true);
+  frame_textview->set_child(*scrollwin_textview_);
+
+  textview_ = Gtk::make_managed<Gtk::TextView>();
+  textview_->set_monospace(true);
+  textview_->set_wrap_mode(Gtk::WrapMode::NONE);
+  scrollwin_textview_->set_child(*textview_);
+
+  Gtk::Box* const preview_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
+  vbox_right->append(*preview_box);
+
+  Gtk::Label* const label_preview = Gtk::make_managed<Gtk::Label>(_("Preview"), true);
+  preview_box->append(*label_preview);
+
+  entry_preview_ = Gtk::make_managed<Gtk::Entry>();
+  entry_preview_->set_editable(false);
+  entry_preview_->set_hexpand(true);
+  entry_preview_->set_tooltip_text(_("Preview of the substitution"));
+  preview_box->append(*entry_preview_);
+  label_preview->set_mnemonic_widget(*entry_preview_);
+
+  const auto add_nav_button = [&](const Glib::ustring& label,
+                                  const Glib::ustring& tooltip, ControlItem& item)
+  {
+    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label);
+    button->set_tooltip_text(tooltip);
+    item.add_widget(*button);
+    button->signal_clicked().connect(item.slot());
+    preview_box->append(*button);
+  };
+  add_nav_button("|<", _("Go to the previous matching file"), controller_.prev_file);
+  add_nav_button("<",  _("Go to previous match"), controller_.prev_match);
+  add_nav_button(">",  _("Go to next match"), controller_.next_match);
+  add_nav_button(">|", _("Go to the next matching file"), controller_.next_file);
+
+  Gtk::Box* const replace_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
+  replace_box->set_halign(Gtk::Align::END);
+  vbox_right->append(*replace_box);
+
+  const auto add_replace_button = [&](const Glib::ustring& label, ControlItem& item)
+  {
+    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label, true);
+    item.add_widget(*button);
+    button->signal_clicked().connect(item.slot());
+    replace_box->append(*button);
+  };
+  add_replace_button(_("_Replace"), controller_.replace);
+  add_replace_button(_("_This file"), controller_.replace_file);
+  add_replace_button(_("_All files"), controller_.replace_all);
+
+  statusline_ = Gtk::make_managed<StatusLine>();
+  vbox_main_->append(*statusline_);
 }
 
 void MainWindow::connect_signals()
@@ -351,11 +460,11 @@ void MainWindow::connect_signals()
   using sigc::mem_fun;
 
   window_->signal_hide         ().connect(mem_fun(*this, &MainWindow::on_hide));
-  window_->signal_style_updated().connect(mem_fun(*this, &MainWindow::on_style_updated));
-  window_->signal_delete_event ().connect(mem_fun(*this, &MainWindow::on_delete_event));
+  window_->signal_close_request().connect(mem_fun(*this, &MainWindow::on_close_request), false);
 
-  combo_entry_pattern_->get_entry()->signal_activate().connect(controller_.find_files.slot());
-  combo_entry_pattern_->signal_changed ().connect(mem_fun(*this, &MainWindow::on_entry_pattern_changed));
+  entry_folder_ ->signal_activate().connect(controller_.find_files.slot());
+  entry_pattern_->signal_activate().connect(controller_.find_files.slot());
+  entry_pattern_->signal_changed ().connect(mem_fun(*this, &MainWindow::on_entry_pattern_changed));
 
   entry_regex_       ->signal_activate().connect(controller_.find_matches.slot());
   entry_substitution_->signal_activate().connect(controller_.find_matches.slot());
@@ -364,10 +473,6 @@ void MainWindow::connect_signals()
   controller_.save_file   .connect(mem_fun(*this, &MainWindow::on_save_file));
   controller_.save_all    .connect(mem_fun(*this, &MainWindow::on_save_all));
   controller_.undo        .connect(mem_fun(*this, &MainWindow::on_undo));
-  controller_.cut         .connect(mem_fun(*this, &MainWindow::on_cut));
-  controller_.copy        .connect(mem_fun(*this, &MainWindow::on_copy));
-  controller_.paste       .connect(mem_fun(*this, &MainWindow::on_paste));
-  controller_.erase       .connect(mem_fun(*this, &MainWindow::on_erase));
   controller_.preferences .connect(mem_fun(*this, &MainWindow::on_preferences));
   controller_.quit        .connect(mem_fun(*this, &MainWindow::on_quit));
   controller_.about       .connect(mem_fun(*this, &MainWindow::on_about));
@@ -381,7 +486,8 @@ void MainWindow::connect_signals()
   controller_.replace_file.connect(mem_fun(*this, &MainWindow::on_replace_file));
   controller_.replace_all .connect(mem_fun(*this, &MainWindow::on_replace_all));
 
-  Settings::instance()->signal_changed().connect(mem_fun(*this, &MainWindow::on_conf_value_changed));
+  AppSettings& settings = app_settings();
+  settings.signal_changed().connect(mem_fun(*this, &MainWindow::on_config_changed));
 
   statusline_->signal_cancel_clicked.connect(
       mem_fun(*this, &MainWindow::on_busy_action_cancel));
@@ -408,16 +514,6 @@ void MainWindow::connect_signals()
       mem_fun(*this, &MainWindow::on_undo_stack_push));
 }
 
-bool MainWindow::autorun_idle()
-{
-  controller_.find_files.activate();
-
-  if (!busy_action_cancel_ && entry_regex_->get_text_length() > 0)
-    controller_.find_matches.activate();
-
-  return false;
-}
-
 void MainWindow::on_hide()
 {
   on_busy_action_cancel();
@@ -426,136 +522,25 @@ void MainWindow::on_hide()
   // necessary since they'd be deleted in the destructor anyway.  But if we
   // have to do a lot of cleanup the dialogs would stay open for that time,
   // which doesn't look neat.
+
   {
     // Play safe and transfer ownership, and let the dtor do the delete.
-    const std::auto_ptr<Gtk::Dialog> temp (about_dialog_);
+    std::unique_ptr<Gtk::Window> temp = std::move(about_dialog_);
   }
   {
-    const std::auto_ptr<PrefDialog> temp (pref_dialog_);
+    std::unique_ptr<PrefDialog> temp = std::move(pref_dialog_);
   }
 }
 
-void MainWindow::on_style_updated()
+bool MainWindow::on_close_request()
 {
-  FileBuffer::pango_context_changed(window_->get_pango_context());
-}
-
-bool MainWindow::on_delete_event(GdkEventAny*)
-{
-  bool quit = confirm_quit_request();
-  save_window_state();
-  return !quit;
-}
-
-void MainWindow::on_cut()
-{
-  if (textview_->is_focus())
-  {
-    if (const Glib::RefPtr<Gtk::TextBuffer> buffer = textview_->get_buffer())
-      buffer->cut_clipboard(textview_->get_clipboard(selection_clipboard),
-                            textview_->get_editable());
-  }
-  else
-  {
-    const int noEntries = 3;
-    Gtk::Entry *entries[noEntries] = { combo_entry_pattern_->get_entry(), entry_regex_,
-                                       entry_substitution_ };
-    for (int i = 0; i < 3; i++)
-    {
-      if (entries[i]->is_focus())
-      {
-        ((Gtk::Editable *)entries[i])->cut_clipboard();
-        return ;
-      }
-    }
-  }
-}
-
-void MainWindow::on_copy()
-{
-  if (textview_->is_focus())
-  {
-    if (const Glib::RefPtr<Gtk::TextBuffer> buffer = textview_->get_buffer())
-      buffer->copy_clipboard(textview_->get_clipboard(selection_clipboard));
-  }
-  else
-  {
-    const int noEntries = 3;
-    Gtk::Entry *entries[noEntries] = { combo_entry_pattern_->get_entry(), entry_regex_,
-                                       entry_substitution_ };
-    for (int i = 0; i < 3; i++)
-    {
-      if (entries[i]->is_focus())
-      {
-        ((Gtk::Editable *)entries[i])->copy_clipboard();
-        return ;
-      }
-    }
-  }
-}
-
-void MainWindow::on_paste()
-{
-  if (textview_->is_focus())
-  {
-    if (const Glib::RefPtr<Gtk::TextBuffer> buffer = textview_->get_buffer())
-      buffer->paste_clipboard(textview_->get_clipboard(selection_clipboard),
-                              textview_->get_editable());
-  }
-  else
-  {
-    const int noEntries = 3;
-    Gtk::Entry *entries[noEntries] = { combo_entry_pattern_->get_entry(), entry_regex_,
-                                       entry_substitution_ };
-    for (int i = 0; i < 3; i++)
-    {
-      if (entries[i]->is_focus())
-      {
-        ((Gtk::Editable *)entries[i])->paste_clipboard();
-        return ;
-      }
-    }
-  }
-}
-
-void MainWindow::on_erase()
-{
-  if (const Glib::RefPtr<Gtk::TextBuffer> buffer = textview_->get_buffer())
-    buffer->erase_selection(true, textview_->get_editable());
+  return !confirm_quit_request();
 }
 
 void MainWindow::on_quit()
 {
   if (confirm_quit_request())
-  {
-    save_window_state();
     window_->hide();
-  }
-}
-
-void MainWindow::save_window_state()
-{
-  int x = 0;
-  int y = 0;
-
-  int width = 0;
-  int height = 0;
-
-  window_->get_position(x, y);
-  window_->get_size(width, height);
-  bool maximized = (window_->get_window()->get_state() & Gdk::WINDOW_STATE_MAXIMIZED);
-
-  Glib::RefPtr<Gio::Settings> settings = Settings::instance();
-
-  settings->set_int(conf_key_window_position_x, x);
-  settings->set_int(conf_key_window_position_y, y);
-  settings->set_boolean(conf_key_window_maximized, maximized);
-
-  if (!maximized)
-  {
-    settings->set_int(conf_key_window_width, width);
-    settings->set_int(conf_key_window_height, height);
-  }
 }
 
 bool MainWindow::confirm_quit_request()
@@ -563,60 +548,142 @@ bool MainWindow::confirm_quit_request()
   if (filetree_->get_modified_count() == 0)
     return true;
 
-  Gtk::MessageDialog dialog (*window_,
-                             _("Some files haven\342\200\231t been saved yet.\nQuit anyway?"),
-                             false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_NONE, true);
+  const Glib::ustring message = _("Some files haven't been saved yet.\nQuit anyway?");
+  Gtk::MessageDialog dialog (*window_, message, false,
+                                              Gtk::MessageType::WARNING,
+                                              Gtk::ButtonsType::NONE,
+                                              true);
 
-  dialog.add_button(Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
-  dialog.add_button(Gtk::Stock::QUIT,   Gtk::RESPONSE_OK);
+  dialog.add_button(_("_Cancel"), Gtk::ResponseType::CANCEL);
+  dialog.add_button(_("_Quit"),   Gtk::ResponseType::OK);
 
-  return (dialog.run() == Gtk::RESPONSE_OK);
+  return (Regexxer::GtkCompat::run_dialog(dialog) == Gtk::ResponseType::OK);
+}
+
+void MainWindow::on_select_folder()
+{
+  // GTK4: use the modern asynchronous Gtk::FileDialog. Keep it alive in a
+  // member until the async callback runs.
+  folder_dialog_ = Gtk::FileDialog::create();
+  folder_dialog_->set_title(_("Select a folder"));
+  folder_dialog_->set_accept_label(_("Select"));
+
+  try
+  {
+    const std::string current_folder = Glib::filename_from_utf8(
+        Util::expand_pathname(entry_folder_->get_text()));
+    if (!current_folder.empty())
+      folder_dialog_->set_initial_folder(Gio::File::create_for_path(current_folder));
+  }
+  catch (const Glib::Error&)
+  {}
+
+  folder_dialog_->select_folder(
+      *window_,
+      sigc::mem_fun(*this, &MainWindow::on_folder_dialog_done));
+}
+
+void MainWindow::on_folder_dialog_done(const Glib::RefPtr<Gio::AsyncResult>& result)
+{
+  Glib::RefPtr<Gtk::FileDialog> dialog = folder_dialog_;
+  folder_dialog_.reset();
+
+  if (!dialog)
+    return;
+
+  Glib::RefPtr<Gio::File> selected;
+  try
+  {
+    selected = dialog->select_folder_finish(result);
+  }
+  catch (const Glib::Error& error)
+  {
+    // Dismissed, cancelled, or failed: leave the current folder untouched.
+    Regexxer::debug_log("folder chooser dismissed: %s", error.what());
+    return;
+  }
+
+  if (!selected)
+    return;
+
+  std::string filename = selected->get_path();
+  if (filename.empty())
+    return;
+
+  // SELECT_FOLDER always returns a directory: store it directly.
+  entry_folder_->set_text(Util::shorten_pathname(
+      Glib::filename_to_utf8(filename)));
 }
 
 void MainWindow::on_find_files()
 {
   if (filetree_->get_modified_count() > 0)
   {
-    Gtk::MessageDialog dialog (*window_,
-                               _("Some files haven\342\200\231t been saved yet.\nContinue anyway?"),
-                               false, Gtk::MESSAGE_WARNING, Gtk::BUTTONS_OK_CANCEL, true);
+    const Glib::ustring message = _("Some files haven't been saved yet.\nContinue anyway?");
+    Gtk::MessageDialog dialog (*window_, message, false, Gtk::MessageType::WARNING,
+                   Gtk::ButtonsType::OK_CANCEL, true);
 
-    if (dialog.run() != Gtk::RESPONSE_OK)
+    if (Regexxer::GtkCompat::run_dialog(dialog) != Gtk::ResponseType::OK)
       return;
   }
 
-  std::string folder = button_folder_->get_filename();
+  undo_stack_clear();
+
+  std::string folder = Glib::filename_from_utf8(Util::expand_pathname(entry_folder_->get_text()));
 
   if (folder.empty())
     folder = Glib::get_current_dir();
-
-  g_return_if_fail(Glib::path_is_absolute(folder));
-
-  undo_stack_clear();
 
   BusyAction busy (*this);
 
   try
   {
-    Glib::RefPtr<Glib::Regex> pattern = Glib::Regex::create(
-        Util::shell_pattern_to_regex(combo_entry_pattern_->get_entry()->get_text()),
-        Glib::REGEX_DOTALL);
+    const Glib::ustring glob = entry_pattern_->get_text();
+    const Glib::ustring regex = Util::shell_pattern_to_regex(glob);
+    Regexxer::debug_log("find files: folder='%s', glob='%s', regex='%s', recursive=%d, hidden=%d",
+                        folder.c_str(), glob.c_str(), regex.c_str(),
+                        button_recursive_->get_active(), button_hidden_->get_active());
+    Glib::RefPtr<Glib::Regex> pattern = Glib::Regex::create(regex, Glib::Regex::CompileFlags::DOTALL);
 
-    filetree_->find_files(folder, pattern,
-                          button_recursive_->get_active(),
-                          button_hidden_->get_active());
+    filetree_->find_files(
+        folder, pattern,
+        button_recursive_->get_active(),
+        button_hidden_->get_active());
+      Regexxer::debug_log("find files complete: %d files", filetree_->get_file_count());
   }
-  catch (const Glib::RegexError&)
+  catch (const Glib::RegexError& error)
   {
-    Gtk::MessageDialog dialog (*window_, _("The file search pattern is invalid."),
-                               false, Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-    dialog.run();
+      Regexxer::debug_log("invalid filename filter: %s", error.what());
+    const Glib::ustring message = _("The file search pattern is invalid.");
+    Gtk::MessageDialog dialog (*window_, message, false,
+                                                Gtk::MessageType::ERROR,
+                                                Gtk::ButtonsType::OK,
+                                                true);
+    Regexxer::GtkCompat::run_dialog(dialog);
   }
   catch (const FileTree::Error& error)
   {
-    FileErrorDialog dialog (*window_, _("The following errors occurred during search:"),
-                            Gtk::MESSAGE_WARNING, error);
-    dialog.run();
+    Regexxer::debug_log("filesystem search returned %zu error(s)", error.get_error_list().size());
+    const Glib::ustring message = _("The following errors occurred during search:");
+    FileErrorDialog dialog (*window_, message, Gtk::MessageType::WARNING, error);
+    Regexxer::GtkCompat::run_dialog(dialog);
+  }
+  catch (const std::exception& error)
+  {
+    Regexxer::debug_log("unexpected search exception: %s", error.what());
+    const Glib::ustring message = Util::compose(
+        _("The file search could not be completed: %1"), error.what());
+    auto dialog = Regexxer::GtkCompat::make_message_dialog(
+        *window_, message, Gtk::MessageType::ERROR, Gtk::ButtonsType::OK, false);
+    Regexxer::GtkCompat::run_dialog(dialog);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("unknown exception escaped file search");
+    auto dialog = Regexxer::GtkCompat::make_message_dialog(
+        *window_, _("The file search failed for an unknown reason."),
+        Gtk::MessageType::ERROR, Gtk::ButtonsType::OK, false);
+    Regexxer::GtkCompat::run_dialog(dialog);
   }
 
   statusline_->set_file_count(filetree_->get_file_count());
@@ -630,28 +697,29 @@ void MainWindow::on_exec_search()
   const bool caseless = button_caseless_->get_active();
   const bool multiple = button_multiple_->get_active();
 
-  entry_regex_completion_stack_.push(regex);
-
-  Settings::instance()->set_string_array(conf_key_regex_patterns, entry_regex_completion_stack_.get_stack());
-
   try
   {
-    Glib::RefPtr<Glib::Regex> pattern =
-        Glib::Regex::create(regex, (caseless) ? Glib::REGEX_CASELESS
-                                              : static_cast<Glib::RegexCompileFlags>(0));
-
+    Glib::RefPtr<Glib::Regex> pattern = Glib::Regex::create(regex, (caseless) ? Glib::Regex::CompileFlags::CASELESS : Glib::Regex::CompileFlags(0));
     filetree_->find_matches(pattern, multiple);
   }
   catch (const Glib::RegexError& error)
   {
-    Gtk::MessageDialog dialog (*window_, error.what(), false,
-                               Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-    dialog.run();
+    const Glib::ustring message =
+        Util::compose(_("Error in regular expression:\n%1"),
+                      Glib::ustring(error.what()));
+
+    Gtk::MessageDialog dialog (*window_, message, false,
+                                                Gtk::MessageType::ERROR,
+                                                Gtk::ButtonsType::OK,
+                                                true);
+    Regexxer::GtkCompat::run_dialog(dialog);
+
+    entry_regex_->grab_focus();
 
     return;
   }
 
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     statusline_->set_match_count(buffer->get_original_match_count());
     statusline_->set_match_index(buffer->get_match_index());
@@ -678,7 +746,9 @@ bool MainWindow::after_exec_search()
 
 void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
 {
-  const FileBufferPtr old_buffer = FileBufferPtr::cast_static(textview_->get_buffer());
+  Regexxer::debug_log("MainWindow::on_filetree_switch_buffer begin (file_index=%d, has_file=%d)",
+                      file_index, static_cast<bool>(fileinfo));
+  const FileBufferPtr old_buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer());
 
   if (fileinfo && fileinfo->buffer == old_buffer)
     return;
@@ -686,10 +756,12 @@ void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
   if (old_buffer)
   {
     std::for_each(buffer_connections_.begin(), buffer_connections_.end(),
-                  std::mem_fun_ref(&sigc::connection::disconnect));
+                  [](sigc::connection& c) { c.disconnect(); });
 
     buffer_connections_.clear();
+    Regexxer::debug_log("forgetting current match in previous buffer");
     old_buffer->forget_current_match();
+    Regexxer::debug_log("previous buffer match forgotten");
   }
 
   if (fileinfo)
@@ -713,11 +785,10 @@ void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
           connect(sigc::mem_fun(*this, &MainWindow::update_preview)));
     }
 
-    set_title_filename(fileinfo->fullname);
+    set_title_filename(Util::filename_to_utf8_fallback(fileinfo->fullname));
 
     controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
     controller_.save_file.set_enabled(buffer->get_modified());
-    controller_.edit_actions.set_enabled(!fileinfo->load_failed);
 
     statusline_->set_match_count(buffer->get_original_match_count());
     statusline_->set_match_index(buffer->get_match_index());
@@ -729,11 +800,10 @@ void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
     textview_->set_editable(false);
     textview_->set_cursor_visible(false);
 
-    window_->set_title(PACKAGE_NAME);
+    set_title_filename();
 
     controller_.replace_file.set_enabled(false);
     controller_.save_file.set_enabled(false);
-    controller_.edit_actions.set_enabled(false);
 
     statusline_->set_match_count(0);
     statusline_->set_match_index(0);
@@ -746,13 +816,23 @@ void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
 
 void MainWindow::on_bound_state_changed()
 {
+  Regexxer::debug_log("MainWindow::on_bound_state_changed begin");
   BoundState bound = filetree_->get_bound_state();
 
   controller_.prev_file.set_enabled((bound & BOUND_FIRST) == 0);
   controller_.next_file.set_enabled((bound & BOUND_LAST)  == 0);
 
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
-    bound &= buffer->get_bound_state();
+  // During a new file search, Gtk::TreeStore::clear() emits a transient
+  // bound-state change before the new selection/buffer pair has settled.
+  // Do not query the editor's previous buffer in that interval.
+  if (filetree_->get_selection()->get_selected())
+  {
+    if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+    {
+      Regexxer::debug_log("MainWindow::on_bound_state_changed: querying selected FileBuffer state");
+      bound &= buffer->get_bound_state();
+    }
+  }
 
   controller_.prev_match.set_enabled((bound & BOUND_FIRST) == 0);
   controller_.next_match.set_enabled((bound & BOUND_LAST)  == 0);
@@ -770,7 +850,7 @@ void MainWindow::on_filetree_match_count_changed()
 {
   controller_.replace_all.set_enabled(filetree_->get_match_count() > 0);
 
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
     controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
 }
 
@@ -790,23 +870,13 @@ void MainWindow::on_go_next_file(bool move_forward)
   on_go_next(move_forward);
 }
 
-bool MainWindow::do_scroll(const Glib::RefPtr<Gtk::TextMark> mark)
-{
-  if (!mark)
-    return false;
-
-  textview_->scroll_to(mark, 0.125);
-  return false;
-}
-
 void MainWindow::on_go_next(bool move_forward)
 {
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     if (const Glib::RefPtr<Gtk::TextMark> mark = buffer->get_next_match(move_forward))
     {
-      Glib::signal_idle ().connect (sigc::bind<const Glib::RefPtr<Gtk::TextMark> >
-            (sigc::mem_fun (*this, &MainWindow::do_scroll), mark));
+      textview_->scroll_to(mark, 0.125);
       statusline_->set_match_index(buffer->get_match_index());
       return;
     }
@@ -820,24 +890,18 @@ void MainWindow::on_go_next(bool move_forward)
 
 void MainWindow::on_replace()
 {
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
-    const Glib::ustring substitution = entry_substitution_->get_text();
-    entry_substitution_completion_stack_.push(substitution);
-    Settings::instance()->set_string_array(conf_key_substitution_patterns, entry_substitution_completion_stack_.get_stack());
-    buffer->replace_current_match(substitution);
+    buffer->replace_current_match(entry_substitution_->get_text());
     on_go_next(true);
   }
 }
 
 void MainWindow::on_replace_file()
 {
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
-    const Glib::ustring substitution = entry_substitution_->get_text();
-    entry_substitution_completion_stack_.push(substitution);
-    Settings::instance()->set_string_array(conf_key_substitution_patterns, entry_substitution_completion_stack_.get_stack());
-    buffer->replace_all_matches(substitution);
+    buffer->replace_all_matches(entry_substitution_->get_text());
     statusline_->set_match_index(0);
   }
 }
@@ -846,10 +910,7 @@ void MainWindow::on_replace_all()
 {
   BusyAction busy (*this);
 
-  const Glib::ustring substitution = entry_substitution_->get_text();
-  entry_substitution_completion_stack_.push(substitution);
-  Settings::instance()->set_string_array(conf_key_substitution_patterns, entry_substitution_completion_stack_.get_stack());
-  filetree_->replace_all_matches(substitution);
+  filetree_->replace_all_matches(entry_substitution_->get_text());
   statusline_->set_match_index(0);
 }
 
@@ -865,8 +926,10 @@ void MainWindow::on_save_file()
     g_assert(error_list.size() == 1);
 
     Gtk::MessageDialog dialog (*window_, error_list.front(), false,
-                               Gtk::MESSAGE_ERROR, Gtk::BUTTONS_OK, true);
-    dialog.run();
+                                                Gtk::MessageType::ERROR,
+                                                Gtk::ButtonsType::OK,
+                                                true);
+    Regexxer::GtkCompat::run_dialog(dialog);
   }
 }
 
@@ -878,9 +941,9 @@ void MainWindow::on_save_all()
   }
   catch (const FileTree::Error& error)
   {
-    FileErrorDialog dialog (*window_, _("The following errors occurred during save:"),
-                            Gtk::MESSAGE_ERROR, error);
-    dialog.run();
+    const Glib::ustring message = _("The following errors occurred during save:");
+    FileErrorDialog dialog (*window_, message, Gtk::MessageType::ERROR, error);
+    Regexxer::GtkCompat::run_dialog(dialog);
   }
 }
 
@@ -892,12 +955,10 @@ void MainWindow::on_undo_stack_push(UndoActionPtr action)
 
 void MainWindow::on_undo()
 {
-  if (textview_->is_focus())
-  {
-    BusyAction busy (*this);
-    undo_stack_->undo_step(sigc::mem_fun(*this, &MainWindow::on_busy_action_pulse));
-    controller_.undo.set_enabled(!undo_stack_->empty());
-  }
+  BusyAction busy (*this);
+
+  undo_stack_->undo_step(sigc::mem_fun(*this, &MainWindow::on_busy_action_pulse));
+  controller_.undo.set_enabled(!undo_stack_->empty());
 }
 
 void MainWindow::undo_stack_clear()
@@ -908,17 +969,17 @@ void MainWindow::undo_stack_clear()
 
 void MainWindow::on_entry_pattern_changed()
 {
-  controller_.find_files.set_enabled(combo_entry_pattern_->get_entry()->get_text_length() > 0);
+  controller_.find_files.set_enabled(entry_pattern_->get_text_length() > 0);
 }
 
 void MainWindow::update_preview()
 {
-  if (const FileBufferPtr buffer = FileBufferPtr::cast_static(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     Glib::ustring preview;
     const int pos = buffer->get_line_preview(entry_substitution_->get_text(), preview);
-
     entry_preview_->set_text(preview);
+
     controller_.replace.set_enabled(pos >= 0);
 
     // Beware, strange code ahead!
@@ -942,22 +1003,28 @@ void MainWindow::update_preview()
 
     if (pos > 0)
     {
-      using namespace sigc;
+      Gtk::Entry* const preview_entry = entry_preview_;
 
       Glib::signal_idle().connect(
-          bind_return(bind(mem_fun(*entry_preview_, &Gtk::Editable::set_position), pos), false),
+          [preview_entry, pos]() -> bool { preview_entry->set_position(pos); return false; },
           Glib::PRIORITY_HIGH_IDLE + 17); // between scroll update (+ 15) and redraw (+ 20)
     }
   }
 }
 
-void MainWindow::set_title_filename(const std::string& filename)
+void MainWindow::set_title_filename(const Glib::ustring& filename)
 {
-  Glib::ustring title = Glib::filename_display_basename(filename);
+  Glib::ustring title;
 
-  title += " (";
-  title += Util::filename_short_display_name(Glib::path_get_dirname(filename));
-  title += ") \342\200\223 " PACKAGE_NAME; // U+2013 EN DASH
+  if (!filename.empty())
+  {
+    title  = Glib::path_get_basename(filename.raw());
+    title += " (";
+    title += Util::shorten_pathname(Glib::path_get_dirname(filename.raw()));
+    title += ") \342\200\223 "; // U+2013 EN DASH
+  }
+
+  title += PACKAGE_NAME;
 
   window_->set_title(title);
 }
@@ -980,6 +1047,7 @@ void MainWindow::busy_action_leave()
   g_return_if_fail(busy_action_running_);
 
   busy_action_running_ = false;
+  busy_action_cancel_  = false;
 
   statusline_->pulse_stop();
 
@@ -991,14 +1059,7 @@ bool MainWindow::on_busy_action_pulse()
   g_return_val_if_fail(busy_action_running_, true);
 
   if (!busy_action_cancel_ && (++busy_action_iteration_ % BUSY_GUI_UPDATE_INTERVAL) == 0)
-  {
     statusline_->pulse();
-
-    const Glib::RefPtr<Glib::MainContext> context = Glib::MainContext::get_default();
-
-    do {}
-    while (context->iteration(false) && !busy_action_cancel_);
-  }
 
   return busy_action_cancel_;
 }
@@ -1017,34 +1078,19 @@ void MainWindow::on_about()
   }
   else
   {
-    std::auto_ptr<Gtk::AboutDialog> dialog (new Gtk::AboutDialog());
-    std::vector<Glib::ustring> authors;
-    for (int i = 0; program_authors[i]; i++)
-      authors.push_back(program_authors[i]);
+    std::unique_ptr<Gtk::Window> dialog (AboutDialog::create(*window_));
 
-    dialog->set_version(PACKAGE_VERSION);
-    dialog->set_logo_icon_name(PACKAGE_TARNAME);
-    dialog->set_comments(_("Search and replace using regular expressions"));
-    dialog->set_copyright("Copyright \302\251 2002-2007 Daniel Elstner");
-    dialog->set_website("http://regexxer.sourceforge.net/");
-
-    dialog->set_authors(authors);
-    dialog->set_translator_credits(_("translator-credits"));
-    dialog->set_license(program_license);
-    dialog->set_wrap_license(true);
-
-    dialog->set_transient_for(*window_);
+    dialog->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::on_about_dialog_hide));
     dialog->show();
-    dialog->signal_response().connect(sigc::mem_fun(*this, &MainWindow::on_about_dialog_response));
 
-    about_dialog_ = dialog;
+    about_dialog_ = std::move(dialog);
   }
 }
 
-void MainWindow::on_about_dialog_response(int)
+void MainWindow::on_about_dialog_hide()
 {
   // Play safe and transfer ownership, and let the dtor do the delete.
-  const std::auto_ptr<Gtk::Dialog> temp (about_dialog_);
+  std::unique_ptr<Gtk::Window> temp = std::move(about_dialog_);
 }
 
 void MainWindow::on_preferences()
@@ -1055,35 +1101,42 @@ void MainWindow::on_preferences()
   }
   else
   {
-    std::auto_ptr<PrefDialog> dialog (new PrefDialog(*window_));
+    std::unique_ptr<PrefDialog> dialog (new PrefDialog(*window_));
 
-    dialog->get_dialog()->signal_hide()
-        .connect(sigc::mem_fun(*this, &MainWindow::on_pref_dialog_hide));
+    dialog->get_dialog()->signal_hide().connect(sigc::mem_fun(*this, &MainWindow::on_pref_dialog_hide));
     dialog->get_dialog()->show();
 
-    pref_dialog_ = dialog;
+    pref_dialog_ = std::move(dialog);
   }
 }
 
 void MainWindow::on_pref_dialog_hide()
 {
   // Play safe and transfer ownership, and let the dtor do the delete.
-  const std::auto_ptr<PrefDialog> temp (pref_dialog_);
+  std::unique_ptr<PrefDialog> temp = std::move(pref_dialog_);
 }
 
-void MainWindow::on_conf_value_changed(const Glib::ustring& key)
+void MainWindow::on_config_changed(const std::string& key)
 {
-  if (key == conf_key_textview_font)
-  {
-    std::string style = "GtkTextView { font: ";
-    style += Settings::instance()->get_string(key);
-    style += "}";
-    Glib::RefPtr<Gtk::CssProvider> css = Gtk::CssProvider::create();
-    css->load_from_data(style);
+  AppSettings& settings = app_settings();
 
-    textview_     ->get_style_context()->add_provider(css, 1);
-    entry_preview_->get_style_context()->add_provider(css, 1);
+  if (matches_config_key(key, AppConfig::modern_key_name(AppConfig::textview_font)))
+  {
+    // GTK4 removed Gtk::TextView::override_font(); apply the font via CSS
+    // on the textview's "text" node. Split the Pango font description into
+    // family + size so the CSS parses.
+    const Pango::FontDescription font_desc(settings.get_string(key, "Monospace 10"));
+    const Glib::ustring css_data =
+        "textview text { font-family: \"" + font_desc.get_family() + "\"; font-size: " +
+        Util::int_to_string(font_desc.get_size() / PANGO_SCALE) + "pt; }";
+    const Glib::RefPtr<Gtk::CssProvider> css = Gtk::CssProvider::create();
+    css->load_from_data(css_data);
+    textview_->get_style_context()->add_provider(css, GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   }
+  // Note: the historical 'toolbar-style' and 'override-direction' keys were
+  // removed from the code and the schema; any direct get_string()/get_boolean()
+  // on a missing key aborts the process with GLib-GIO-ERROR.
 }
 
 } // namespace Regexxer
+

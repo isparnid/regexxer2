@@ -62,8 +62,8 @@ FileInfoPtr get_fileinfo_from_iter(const Gtk::TreeModel::iterator& iter)
   return shared_dynamic_cast<FileInfo>(base);
 }
 
-int default_sort_func   (const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::iterator& b);
-int collatekey_sort_func(const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::iterator& b);
+int default_sort_func   (const Gtk::TreeModel::const_iterator& a, const Gtk::TreeModel::const_iterator& b);
+int collatekey_sort_func(const Gtk::TreeModel::const_iterator& a, const Gtk::TreeModel::const_iterator& b);
 
 bool next_match_file(Gtk::TreeModel::iterator& iter, Gtk::TreeModel::Path* collapse = 0);
 bool prev_match_file(Gtk::TreeModel::iterator& iter, Gtk::TreeModel::Path* collapse = 0);
@@ -153,9 +153,9 @@ struct FileTree::ReplaceMatchesData
   const Glib::ustring                   substitution;
   FileTree::TreeRowRefPtr               row_reference;
   UndoStackPtr                          undo_stack;
-  const sigc::slot<void, UndoActionPtr> slot_undo_stack_push;
+  const sigc::slot<void(UndoActionPtr)> slot_undo_stack_push;
 
-  void undo_stack_push(UndoActionPtr undo_action);
+  void undo_stack_push(UndoActionPtr);
 
 private:
   ReplaceMatchesData(const FileTree::ReplaceMatchesData&);
@@ -189,7 +189,7 @@ private:
   FileTree::TreeRowRefPtr row_reference_;
   UndoActionPtr           buffer_action_;
 
-  virtual bool do_undo(const sigc::slot<bool>& pulse);
+  virtual bool do_undo(const sigc::slot<bool()>& pulse);
 };
 
 } // namespace Regexxer

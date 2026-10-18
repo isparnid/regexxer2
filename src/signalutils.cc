@@ -36,7 +36,7 @@ QueuedSignal::QueuedSignal(int priority)
 QueuedSignal::~QueuedSignal()
 {}
 
-sigc::connection QueuedSignal::connect(const sigc::slot<void>& slot)
+sigc::connection QueuedSignal::connect(const sigc::slot<void()>& slot)
 {
   return signal_.connect(slot);
 }

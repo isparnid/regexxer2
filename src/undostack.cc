@@ -40,7 +40,7 @@ namespace Regexxer
 UndoAction::~UndoAction()
 {}
 
-bool UndoAction::undo(const sigc::slot<bool>& pulse)
+bool UndoAction::undo(const sigc::slot<bool()>& pulse)
 {
   return do_undo(pulse);
 }
@@ -68,7 +68,7 @@ bool UndoStack::empty() const
   return actions_.empty();
 }
 
-void UndoStack::undo_step(const sigc::slot<bool>& pulse)
+void UndoStack::undo_step(const sigc::slot<bool()>& pulse)
 {
   try
   {
@@ -87,7 +87,7 @@ void UndoStack::undo_step(const sigc::slot<bool>& pulse)
   {}
 }
 
-bool UndoStack::do_undo(const sigc::slot<bool>& pulse)
+bool UndoStack::do_undo(const sigc::slot<bool()>& pulse)
 {
   unsigned int iteration = 0;
   bool skip = true;

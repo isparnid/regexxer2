@@ -22,7 +22,6 @@
 #include "stringutils.h"
 #include "translation.h"
 
-#include <gdk/gdkkeysyms.h>
 #include <gtkmm.h>
 #include <locale>
 #include <sstream>
@@ -68,29 +67,31 @@ CounterBox::CounterBox(const Glib::ustring& label)
 {
   using namespace Gtk;
 
-  set_shadow_type(SHADOW_ETCHED_IN);
+  // GTK4: Frame no longer provides set_shadow_type()/ShadowType.
+  // The frame's appearance is controlled by CSS/theme instead.
 
-  Box *const paddingbox = new HBox(false, 0);
-  add(*manage(paddingbox));
+  Box *const paddingbox = new Gtk::Box(Gtk::Orientation::HORIZONTAL, 0);
+  set_child(*paddingbox);
 
-  Box *const box = new HBox(false, 0);
-  paddingbox->pack_start(*manage(box), PACK_SHRINK, 2);
+  Box *const box = new Gtk::Box(Gtk::Orientation::HORIZONTAL, 0);
+  paddingbox->append(*manage(box));
 
-  box->pack_start(*manage(new Label(label + ' ')), PACK_SHRINK);
+  box->append(*manage(new Label(label + ' ')));
 
-  label_index_ = new Label("", 1.0, 0.5);
-  box->pack_start(*manage(label_index_), PACK_SHRINK);
+  label_index_ = new Label("");
+  label_index_->set_halign(Gtk::Align::FILL);
+  label_index_->set_valign(Gtk::Align::CENTER);
+  box->append(*manage(label_index_));
 
-  box->pack_start(*manage(new Label("/")), PACK_SHRINK, 2);
+  box->append(*manage(new Label("/")));
 
-  label_count_ = new Label("", 0.0, 0.5);
-  box->pack_start(*manage(label_count_), PACK_SHRINK);
+  label_count_ = new Label("");
+  label_count_->set_halign(Gtk::Align::FILL);
+  label_count_->set_valign(Gtk::Align::CENTER);
+  box->append(*manage(label_count_));
 
   label_index_->set_single_line_mode(true);
   label_count_->set_single_line_mode(true);
-
-  label_index_->signal_style_updated().connect(
-      sigc::mem_fun(*this, &CounterBox::on_label_style_updated));
 
   try // don't abort if the user-specified locale doesn't exist
   {
@@ -104,7 +105,7 @@ CounterBox::CounterBox(const Glib::ustring& label)
   set_index(0);
   set_count(0);
 
-  paddingbox->show_all();
+  paddingbox->show();
 }
 
 CounterBox::~CounterBox()
@@ -116,7 +117,7 @@ void CounterBox::set_index(int index)
 
   // Work around a bug in GTK+ that causes right-aligned labels to be
   // cut off at the end.  Forcing resize seems to solve the problem.
-  check_resize();
+  queue_resize();
 }
 
 void CounterBox::set_count(int count)
@@ -168,16 +169,14 @@ void CounterBox::recalculate_label_width()
     widest_number = (digits_range_ / 10) * second_widest_digit_;
   }
 
-  int width = 0, height = 0, xpad = 0, ypad = 0;
+  int width = 0, height = 0;
 
   const Glib::ustring text = number_to_string(widest_number);
   label_index_->create_pango_layout(text)->get_pixel_size(width, height);
 
-  label_index_->get_padding(xpad, ypad);
-  label_index_->set_size_request(width + 2 * xpad, -1);
+  label_index_->set_size_request(width, -1);
 
-  label_count_->get_padding(xpad, ypad);
-  label_count_->set_size_request(width + 2 * xpad, -1);
+  label_count_->set_size_request(width, -1);
 }
 
 /*
@@ -221,52 +220,75 @@ void CounterBox::on_label_style_updated()
 
 StatusLine::StatusLine()
 :
-  Gtk::HBox(false, 3),
+  Gtk::Box(Gtk::Orientation::HORIZONTAL, 3),
   stop_button_    (0),
   progressbar_    (0),
   file_counter_   (0),
   match_counter_  (0),
-  statusbar_      (0)
+  status_label_   (0),
+  file_index_     (0),
+  file_count_     (0),
+  match_index_    (0),
+  match_count_    (0)
 {
   using namespace Gtk;
 
-  // The statusbar looks ugly if the stop button gets its default size,
-  // so let's reduce the button's size request to a reasonable amount.
-
-  std::string style = "GtkButton#regexxer-stop-button\n"
+  // Slim single-row statusline, about menubar height: small Stop button,
+  // two compact counter labels and a plain encoding label (no bulky
+  // Gtk::Statusbar / Gtk::Frame which made the bar too tall).
+  std::string style = "#regexxer-stop-button\n"
                       "{\n"
-                      "  padding-left: 0;"
-                      "  -GtkWidget-interior-focus: 0;\n"
-                      "  -GtkWidget-focus-padding: 0;\n"
-                      "}";
+                      "  padding: 0 6px;\n"
+                      "  min-height: 0;\n"
+                      "}\n"
+                      "#regexxer-statusline\n"
+                      "{\n"
+                      "  padding: 0;\n"
+                      "}\n"
+                      "#regexxer-statusline label\n"
+                      "{\n"
+                      "  padding: 0 4px;\n"
+                      "}\n";
   Glib::RefPtr<Gtk::CssProvider> css = Gtk::CssProvider::create();
   css->load_from_data(style);
 
+  set_name("regexxer-statusline");
+  get_style_context()->add_provider(css, 1);
+
   stop_button_ = new Button(_("Stop"));
-  pack_start(*manage(stop_button_), PACK_SHRINK);
+  append(*manage(stop_button_));
   stop_button_->set_name("regexxer-stop-button");
-  stop_button_->get_style_context()->add_provider(css, 1);
+  stop_button_->set_valign(Gtk::Align::CENTER);
 
   progressbar_ = new ProgressBar();
-  pack_start(*manage(progressbar_), PACK_SHRINK);
+  progressbar_->set_valign(Gtk::Align::CENTER);
+  progressbar_->set_size_request(80, -1);
+  append(*manage(progressbar_));
 
-  file_counter_ = new CounterBox(_("File:"));
-  pack_start(*manage(file_counter_), PACK_SHRINK);
+  file_counter_ = new Label();
+  file_counter_->set_valign(Gtk::Align::CENTER);
+  append(*manage(file_counter_));
 
-  match_counter_ = new CounterBox(_("Match:"));
-  pack_start(*manage(match_counter_), PACK_SHRINK);
+  match_counter_ = new Label();
+  match_counter_->set_valign(Gtk::Align::CENTER);
+  append(*manage(match_counter_));
 
-  statusbar_ = new Statusbar();
-  pack_start(*manage(statusbar_), PACK_EXPAND_WIDGET);
+  status_label_ = new Label();
+  status_label_->set_valign(Gtk::Align::CENTER);
+  status_label_->set_hexpand(true);
+  status_label_->set_halign(Gtk::Align::START);
+  status_label_->set_ellipsize(Pango::EllipsizeMode::END);
+  append(*manage(status_label_));
+
+  update_file_label();
+  update_match_label();
 
   stop_button_->set_sensitive(false);
   stop_button_->signal_clicked().connect(signal_cancel_clicked.make_slot());
 
   progressbar_->set_pulse_step(0.025);
 
-  stop_button_->get_accessible()->set_description(_("Cancels the running search"));
-
-  show_all_children();
+  show();
 }
 
 StatusLine::~StatusLine()
@@ -274,37 +296,34 @@ StatusLine::~StatusLine()
 
 void StatusLine::set_file_index(int file_index)
 {
-  file_counter_->set_index(file_index);
+  file_index_ = file_index;
+  update_file_label();
 }
 
 void StatusLine::set_file_count(int file_count)
 {
-  file_counter_->set_count(file_count);
+  file_count_ = file_count;
+  update_file_label();
 }
 
 void StatusLine::set_match_index(int match_index)
 {
-  match_counter_->set_index(match_index);
+  match_index_ = match_index;
+  update_match_label();
 }
 
 void StatusLine::set_match_count(int match_count)
 {
-  match_counter_->set_count(match_count);
+  match_count_ = match_count;
+  update_match_label();
 }
 
 void StatusLine::set_file_encoding(const std::string& file_encoding)
 {
-  statusbar_->pop();
-
   const Glib::ustring encoding = file_encoding;
   g_return_if_fail(encoding.is_ascii());
 
-  statusbar_->push(encoding);
-
-  // Work around a bug in GTK+ that causes right-aligned labels (note that
-  // the status bar text is right-aligned in RTL locales) to be cut off at
-  // the end.  Forcing resize seems to solve the problem.
-  statusbar_->check_resize();
+  status_label_->set_text(encoding);
 }
 
 void StatusLine::pulse_start()
@@ -323,22 +342,26 @@ void StatusLine::pulse_stop()
   stop_button_->set_sensitive(false);
 }
 
-void StatusLine::on_hierarchy_changed(Gtk::Widget* previous_toplevel)
+void StatusLine::update_file_label()
 {
-  if (Gtk::Window *const window = dynamic_cast<Gtk::Window*>(previous_toplevel))
-  {
-    stop_button_->remove_accelerator(
-        window->get_accel_group(), GDK_KEY_Escape, Gdk::ModifierType(0));
-  }
+  // Classic compact format “File: 0/0”, kept translatable via existing msgids.
+  file_counter_->set_text(
+      Util::compose(_("%1: %2/%3"), _("File"), Util::int_to_string(file_index_),
+                    Util::int_to_string(file_count_)));
+}
 
-  Gtk::HBox::on_hierarchy_changed(previous_toplevel);
+void StatusLine::update_match_label()
+{
+  match_counter_->set_text(
+      Util::compose(_("%1: %2/%3"), _("Match"), Util::int_to_string(match_index_),
+                    Util::int_to_string(match_count_)));
+}
 
-  if (Gtk::Window *const window = dynamic_cast<Gtk::Window*>(get_toplevel()))
-  {
-    stop_button_->add_accelerator(
-        "activate", window->get_accel_group(),
-        GDK_KEY_Escape, Gdk::ModifierType(0), Gtk::AccelFlags(0));
-  }
+void StatusLine::on_hierarchy_changed(Gtk::Widget*)
+{
+  // GTK4: hierarchy_changed is no longer a Gtk::Widget virtual method.
+  // The Escape-key accelerator previously installed here is not re-implemented;
+  // the stop button remains activable through its clicked signal.
 }
 
 } // namespace Regexxer

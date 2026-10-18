@@ -42,7 +42,7 @@ FileBufferActionInsert::FileBufferActionInsert(FileBuffer& filebuffer, int offse
 FileBufferActionInsert::~FileBufferActionInsert()
 {}
 
-bool FileBufferActionInsert::do_undo(const sigc::slot<bool>&)
+bool FileBufferActionInsert::do_undo(const sigc::slot<bool()>&)
 {
   g_return_val_if_fail(!buffer().in_user_action(), false);
 
@@ -75,7 +75,7 @@ FileBufferActionErase::FileBufferActionErase(FileBuffer& filebuffer, int offset,
 FileBufferActionErase::~FileBufferActionErase()
 {}
 
-bool FileBufferActionErase::do_undo(const sigc::slot<bool>&)
+bool FileBufferActionErase::do_undo(const sigc::slot<bool()>&)
 {
   g_return_val_if_fail(!buffer().in_user_action(), false);
 
@@ -114,7 +114,7 @@ void FileBufferActionRemoveMatch::weak_notify()
   match_.reset();
 }
 
-bool FileBufferActionRemoveMatch::do_undo(const sigc::slot<bool>&)
+bool FileBufferActionRemoveMatch::do_undo(const sigc::slot<bool()>&)
 {
   if (match_)
   {

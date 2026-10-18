@@ -21,7 +21,7 @@
 #ifndef REGEXXER_TRANSLATION_H_INCLUDED
 #define REGEXXER_TRANSLATION_H_INCLUDED
 
-#include <glib/gmacros.h>
+#include <glib.h>
 #include <glibmm/ustring.h>
 
 #ifndef gettext_noop

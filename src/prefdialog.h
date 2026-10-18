@@ -26,14 +26,20 @@
 #include <sigc++/sigc++.h>
 #include <glibmm/ustring.h>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace Gtk
 {
 class CheckButton;
 class ColorButton;
+class ComboBoxText;
 class Dialog;
 class Entry;
 class FontButton;
+class Grid;
+class Label;
+class Notebook;
 class Widget;
 class Window;
 }
@@ -50,11 +56,13 @@ public:
   Gtk::Dialog* get_dialog() { return dialog_.get(); }
 
 private:
-  std::auto_ptr<Gtk::Dialog>  dialog_;
+  std::unique_ptr<Gtk::Dialog>  dialog_;
   Gtk::FontButton*            button_textview_font_;
   Gtk::ColorButton*           button_match_color_;
   Gtk::ColorButton*           button_current_color_;
   Gtk::Entry*                 entry_fallback_;
+  Gtk::ComboBoxText*          combo_language_;
+  Gtk::Label*                 label_language_hint_;
   bool                        entry_fallback_changed_;
 
   void load_xml();
@@ -70,6 +78,11 @@ private:
   void on_current_color_set();
   void on_entry_fallback_changed();
   void on_entry_fallback_activate();
+  void on_language_changed();
+
+  struct LanguageEntry { Glib::ustring code; Glib::ustring label; };
+  static std::vector<LanguageEntry> available_languages();
+  void fill_language_combo(const Glib::ustring& current);
 };
 
 } // namespace Regexxer

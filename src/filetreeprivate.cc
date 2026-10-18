@@ -19,9 +19,9 @@
  */
 
 #include "filetreeprivate.h"
-
 #include <glib.h>
 #include <gtkmm/treestore.h>
+#include <iterator>
 
 namespace Regexxer
 {
@@ -36,7 +36,7 @@ const FileTreeColumns& FileTreeColumns::instance()
   return column_record;
 }
 
-int default_sort_func(const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::iterator& b)
+int default_sort_func(const Gtk::TreeModel::const_iterator& a, const Gtk::TreeModel::const_iterator& b)
 {
   const FileTreeColumns& columns = FileTreeColumns::instance();
 
@@ -46,7 +46,7 @@ int default_sort_func(const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::i
   return a_key.compare(b_key);
 }
 
-int collatekey_sort_func(const Gtk::TreeModel::iterator& a, const Gtk::TreeModel::iterator& b)
+int collatekey_sort_func(const Gtk::TreeModel::const_iterator& a, const Gtk::TreeModel::const_iterator& b)
 {
   typedef std::string::difference_type diff_type;
 
@@ -75,7 +75,7 @@ bool next_match_file(Gtk::TreeModel::iterator& iter, Gtk::TreeModel::Path* colla
     {
       if ((*iter)[columns.matchcount] > 0)
       {
-        if (const Gtk::TreeModel::Children& children = iter->children()) // directory?
+        if (auto children = iter->children()) // directory?
         {
           parent = iter;
           iter = children.begin();
@@ -114,11 +114,12 @@ bool prev_match_file(Gtk::TreeModel::iterator& iter, Gtk::TreeModel::Path* colla
   {
     if (path.prev())
     {
-      iter = parent->children()[path.back()];
+      iter = parent->children().begin();
+      std::advance(iter, path.back());
 
       if ((*iter)[columns.matchcount] > 0)
       {
-        if (const Gtk::TreeModel::Children& children = iter->children()) // directory?
+        if (auto children = iter->children()) // directory?
         {
           parent = iter;
           path.push_back(children.size()); // one beyond the last child
@@ -228,11 +229,11 @@ FileTree::ReplaceMatchesData::ReplaceMatchesData(FileTree& filetree_,
 FileTree::ReplaceMatchesData::~ReplaceMatchesData()
 {}
 
-void FileTree::ReplaceMatchesData::undo_stack_push(UndoActionPtr undo_action)
+void FileTree::ReplaceMatchesData::undo_stack_push(UndoActionPtr)
 {
   g_return_if_fail(row_reference);
 
-  undo_stack->push(UndoActionPtr(new BufferActionShell(filetree, row_reference, undo_action)));
+  undo_stack->push(UndoActionPtr(new BufferActionShell(filetree, row_reference, UndoActionPtr())));
 }
 
 /**** Regexxer::FileTree::ScopedBlockSorting *******************************/
@@ -241,7 +242,7 @@ FileTree::ScopedBlockSorting::ScopedBlockSorting(FileTree& filetree)
 :
   filetree_     (filetree),
   sort_column_  (Gtk::TreeStore::DEFAULT_SORT_COLUMN_ID),
-  sort_order_   (Gtk::SORT_ASCENDING)
+  sort_order_   (Gtk::SortType::ASCENDING)
 {
   filetree_.set_headers_clickable(false);
   filetree_.treestore_->get_sort_column_id(sort_column_, sort_order_);
@@ -275,7 +276,7 @@ FileTree::BufferActionShell::BufferActionShell(FileTree& filetree,
 FileTree::BufferActionShell::~BufferActionShell()
 {}
 
-bool FileTree::BufferActionShell::do_undo(const sigc::slot<bool>& pulse)
+bool FileTree::BufferActionShell::do_undo(const sigc::slot<bool()>& pulse)
 {
   g_return_val_if_fail(row_reference_->is_valid(), false);
 

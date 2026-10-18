@@ -1,21 +1,21 @@
-/*
- * Copyright (c) 2002-2007  Daniel Elstner  <daniel.kitta@gmail.com>
+/* $Id$
  *
- * This file is part of regexxer.
+ * Copyright (c) 2002  Daniel Elstner  <daniel.elstner@gmx.net>
  *
- * regexxer is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License VERSION 2 as
+ * published by the Free Software Foundation.  You are not allowed to
+ * use any other version of the license; unless you got the explicit
+ * permission from the author to do so.
  *
- * regexxer is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with regexxer; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef REGEXXER_FILEBUFFER_H_INCLUDED
@@ -25,9 +25,10 @@
 #include "signalutils.h"
 #include "undostack.h"
 
-#include <gtksourceviewmm/buffer.h>
+#include <gtkmm/textbuffer.h>
 #include <set>
 #include <stack>
+#include <vector>
 
 
 namespace Regexxer
@@ -36,22 +37,18 @@ namespace Regexxer
 class FileBufferActionRemoveMatch;
 
 
-class FileBuffer : public Gsv::Buffer
+class FileBuffer : public Gtk::TextBuffer
 {
 public:
   static Glib::RefPtr<FileBuffer> create();
-  static Glib::RefPtr<FileBuffer> create_with_error_message(
-      const Glib::RefPtr<Gdk::Pixbuf>& pixbuf, const Glib::ustring& message);
-
-  static void pango_context_changed(const Glib::RefPtr<Pango::Context>& context);
+  static Glib::RefPtr<FileBuffer> create_with_error_message(const Glib::ustring& message);
 
   virtual ~FileBuffer();
 
   bool is_freeable() const;
   bool in_user_action() const;
 
-  int find_matches(const Glib::RefPtr<Glib::Regex>& pattern, bool multiple,
-                   const sigc::slot<void, int, const Glib::ustring&>& feedback);
+  int find_matches(Glib::Regex& pattern, bool multiple);
 
   int get_match_count() const;
   int get_match_index() const;
@@ -74,17 +71,17 @@ public:
   void undo_add_weak(FileBufferActionRemoveMatch* ptr);
   void undo_remove_weak(FileBufferActionRemoveMatch* ptr);
 
-  sigc::signal<void>                signal_match_count_changed;
-  sigc::signal<void>                signal_bound_state_changed;
+  sigc::signal<void()>             signal_match_count_changed;
+  sigc::signal<void()>             signal_bound_state_changed;
   Util::QueuedSignal                signal_preview_line_changed;
-  sigc::signal<bool>                signal_pulse;
-  sigc::signal<void, UndoActionPtr> signal_undo_stack_push;
+  sigc::signal<bool()>             signal_pulse;
+  sigc::signal<void(UndoActionPtr)> signal_undo_stack_push;
 
 protected:
   FileBuffer();
 
-  virtual void on_insert(const iterator& pos, const Glib::ustring& text, int bytes);
-  virtual void on_erase(const iterator& rbegin, const iterator& rend);
+  virtual void on_insert(iterator& pos, const Glib::ustring& text, int bytes);
+  virtual void on_erase(iterator& rbegin, iterator& rend);
   virtual void on_mark_deleted(const Glib::RefPtr<Mark>& mark);
   virtual void on_apply_tag(const Glib::RefPtr<Tag>& tag,
                             const iterator& range_begin, const iterator& range_end);
@@ -96,11 +93,11 @@ private:
   class ScopedLock;
   class ScopedUserAction;
 
-  typedef std::set<MatchDataPtr, MatchDataLess>     MatchSet;
+  typedef std::set<MatchDataPtr,MatchDataLess>      MatchSet;
   typedef std::stack<FileBufferActionRemoveMatch*>  WeakUndoStack;
 
   MatchSet            match_set_;
-  MatchSet::iterator  current_match_;
+  int                 current_match_index_;
   UndoStackPtr        user_action_stack_;
   WeakUndoStack       weak_undo_stack_;
   int                 match_count_;
@@ -116,14 +113,20 @@ private:
 
   void remove_tag_current();
   void apply_tag_current();
+  MatchSet::iterator find_current_match();
+  MatchSet::const_iterator find_current_match() const;
 
   static bool is_match_start(const iterator& where);
   static void find_line_bounds(iterator& line_begin, iterator& line_end);
 
   void update_bound_state();
   void notify_weak_undos();
+
+  // Work-around for silly, stupid, and annoying gcc 2.95.x.
+  friend class FileBuffer::ScopedLock;
 };
 
 } // namespace Regexxer
 
 #endif /* REGEXXER_FILEBUFFER_H_INCLUDED */
+

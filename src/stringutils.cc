@@ -23,7 +23,7 @@
 #include <glib.h>
 #include <glib-object.h>
 #include <glibmm.h>
-#include <gdkmm/color.h>
+#include <gdkmm/rgba.h>
 
 #include <algorithm>
 #include <iomanip>
@@ -680,7 +680,7 @@ Glib::ustring Util::filename_short_display_name(const std::string& filename)
   return Glib::filename_display_name(filename);
 }
 
-Glib::ustring Util::color_to_string(const Gdk::Color& color)
+Glib::ustring Util::color_to_string(const Gdk::RGBA& color)
 {
   std::ostringstream output;
 
@@ -689,9 +689,9 @@ Glib::ustring Util::color_to_string(const Gdk::Color& color)
   output.setf(std::ios::uppercase);
   output.fill('0');
 
-  output << '#' << std::setw(2) << scale_to_8bit(color.get_red())
-                << std::setw(2) << scale_to_8bit(color.get_green())
-                << std::setw(2) << scale_to_8bit(color.get_blue());
+  output << '#' << std::setw(2) << static_cast<unsigned int>(color.get_red() * 255.0)
+                << std::setw(2) << static_cast<unsigned int>(color.get_green() * 255.0)
+                << std::setw(2) << static_cast<unsigned int>(color.get_blue() * 255.0);
 
   return output.str();
 }
@@ -718,4 +718,32 @@ Glib::ustring Util::enum_to_nick_impl(GType type, int value)
   g_return_val_if_fail(enum_value != 0, "");
 
   return enum_value->value_nick;
+}
+
+/*
+ * Replace all non-ASCII bytes by octal escapes.  Meant for messages
+ * that must be printable even if every other conversion failed.
+ */
+Glib::ustring Util::convert_to_ascii(const std::string& str)
+{
+  std::string result;
+  result.reserve(str.size());
+
+  for (std::string::const_iterator p = str.begin(); p != str.end(); ++p)
+  {
+    const unsigned char c = static_cast<unsigned char>(*p);
+
+    if ((c & 0x80U) == 0)
+    {
+      result += static_cast<char>(c);
+    }
+    else
+    {
+      char buf[5];
+      g_snprintf(buf, sizeof(buf), "\\%03o", static_cast<unsigned int>(c));
+      result += buf;
+    }
+  }
+
+  return Glib::ustring(result);
 }

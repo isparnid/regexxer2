@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace Gdk { class Color; }
+namespace Gdk { class RGBA; }
 
 namespace Util
 {
@@ -46,8 +46,12 @@ Glib::ustring substitute_references(const Glib::ustring& substitution,
 
 Glib::ustring filename_short_display_name(const std::string& filename);
 
+// Replace all non-ASCII bytes by octal escapes.  Meant for messages
+// that must be printable even if every other conversion failed.
+Glib::ustring convert_to_ascii(const std::string& str);
+
 Glib::ustring int_to_string(int number);
-Glib::ustring color_to_string(const Gdk::Color& color);
+Glib::ustring color_to_string(const Gdk::RGBA& color);
 
 int enum_from_nick_impl(GType type, const Glib::ustring& nick);
 Glib::ustring enum_to_nick_impl(GType type, int value);
@@ -60,6 +64,10 @@ template <class T> inline
 Glib::ustring enum_to_nick(T value)
   { return Util::enum_to_nick_impl(Glib::Value<T>::value_type(), value); }
 
-} // namespace Util
+  // Stubs
+  inline Glib::ustring filename_to_utf8_fallback(const std::string& filename) { return Glib::ustring(filename); }
+  inline Glib::ustring shorten_pathname(const Glib::ustring& pathname, int max_length = 40) { return pathname; }
+  inline Glib::ustring expand_pathname(const Glib::ustring& pathname) { return pathname; }
 
+} // namespace Util
 #endif /* REGEXXER_STRINGUTILS_H_INCLUDED */
