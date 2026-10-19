@@ -52,6 +52,46 @@ const char* Util::translate(const char* msgid)
 #endif
 }
 
+Glib::ustring Util::translate_ui(const char* msgid)
+{
+  // Historic .ui files (and thus po/*.po msgids) store apostrophes as XML
+  // entities (e.g. "_Look&#x2019;n&#x2019;feel"). Translate first, then
+  // decode entities for display.
+  Glib::ustring text = Util::translate(msgid);
+  Glib::ustring out;
+  out.reserve(text.raw().size());
+  const std::string& raw = text.raw();
+  for (std::string::size_type i = 0; i < raw.size();)
+  {
+    if (raw.compare(i, 8, "&#x2019;") == 0)
+    {
+      out += "\342\200\231"; // U+2019 RIGHT SINGLE QUOTATION MARK
+      i += 8;
+    }
+    else if (raw.compare(i, 6, "&amp;") == 0)
+    {
+      out += "&";
+      i += 6;
+    }
+    else if (raw.compare(i, 5, "&#x27;") == 0 || raw.compare(i, 6, "&apos;") == 0)
+    {
+      out += "'";
+      i += (raw.compare(i, 5, "&#x27;") == 0) ? 5 : 6;
+    }
+    else if (raw.compare(i, 6, "&quot;") == 0)
+    {
+      out += "\"";
+      i += 6;
+    }
+    else
+    {
+      out += raw[i];
+      ++i;
+    }
+  }
+  return out;
+}
+
 Glib::ustring Util::compose_argv(const char* format, int argc, const Glib::ustring *const * argv)
 {
   const std::string::size_type format_size = std::strlen(format);

@@ -1217,6 +1217,9 @@ CMakeFiles/regexxer2.dir/src/prefdialog.cc.o: \
  /usr/include/gtkmm-4.0/gtkmm/fontbutton.h \
  /usr/include/gtkmm-4.0/gtkmm/fontchooser.h \
  /usr/include/gtkmm-4.0/gtkmm/grid.h /usr/include/gtkmm-4.0/gtkmm/label.h \
+ /usr/include/gtkmm-4.0/gtkmm/messagedialog.h \
  /usr/include/gtkmm-4.0/gtkmm/notebook.h \
  /usr/include/gtkmm-4.0/gtkmm/notebookpage.h \
+ /usr/include/giomm-2.68/giomm/settingsschema.h \
+ /usr/include/giomm-2.68/giomm/settingsschemakey.h \
  /home/daniel/regexxer2/src/config.h

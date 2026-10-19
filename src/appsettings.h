@@ -54,6 +54,30 @@ public:
     settings->set_string(key, value);
   }
 
+  int get_int(const Glib::ustring& key, int default_value = 0) const
+  {
+    Glib::RefPtr<Gio::Settings> settings = Settings::instance();
+    if (!has_key(settings, key))
+      return default_value;
+    return settings->get_int(key);
+  }
+
+  void set_int(const Glib::ustring& key, int value)
+  {
+    Glib::RefPtr<Gio::Settings> settings = Settings::instance();
+    if (!has_key(settings, key))
+      return;
+    settings->set_int(key, value);
+  }
+
+  void set_bool(const Glib::ustring& key, bool value)
+  {
+    Glib::RefPtr<Gio::Settings> settings = Settings::instance();
+    if (!has_key(settings, key))
+      return;
+    settings->set_boolean(key, value);
+  }
+
   Glib::SignalProxyDetailed<void(const Glib::ustring&)> signal_changed()
   {
     return Settings::instance()->signal_changed();

@@ -34,7 +34,9 @@
 #include <gtkmm/fontbutton.h>
 #include <gtkmm/grid.h>
 #include <gtkmm/label.h>
+#include <gtkmm/messagedialog.h>
 #include <gtkmm/notebook.h>
+#include <giomm/settingsschema.h>
 #include <vector>
 
 #include <config.h>
@@ -50,10 +52,9 @@ PrefDialog::PrefDialog(Gtk::Window& parent)
   button_textview_font_   (0),
   button_match_color_     (0),
   button_current_color_   (0),
-  entry_fallback_         (0),
+  combo_fallback_         (0),
   combo_language_         (0),
-  label_language_hint_    (0),
-  entry_fallback_changed_ (false)
+  label_language_hint_    (0)
 {
   load_xml();
   dialog_->set_transient_for(parent);
@@ -86,23 +87,23 @@ void PrefDialog::load_xml()
   table_look->set_margin(10);
   table_look->set_column_spacing(12);
   table_look->set_row_spacing(12);
-  notebook->append_page(*table_look, _("_Look'n'feel"));
+  notebook->append_page(*table_look, Util::translate_ui("_Look&#x2019;n&#x2019;feel"));
 
-  Label* const label_font = Gtk::make_managed<Label>(_("Text view font:"), true);
+  Label* const label_font = Gtk::make_managed<Label>(Util::translate_ui("_Text view font:"), true);
   label_font->set_halign(Gtk::Align::START);
   table_look->attach(*label_font, 0, 0);
   button_textview_font_ = Gtk::make_managed<FontButton>();
   table_look->attach(*button_textview_font_, 1, 0);
   label_font->set_mnemonic_widget(*button_textview_font_);
 
-  Label* const label_match = Gtk::make_managed<Label>(_("Match color:"), true);
+  Label* const label_match = Gtk::make_managed<Label>(Util::translate_ui("_Match color:"), true);
   label_match->set_halign(Gtk::Align::START);
   table_look->attach(*label_match, 0, 1);
   button_match_color_ = Gtk::make_managed<ColorButton>();
   table_look->attach(*button_match_color_, 1, 1);
   label_match->set_mnemonic_widget(*button_match_color_);
 
-  Label* const label_current = Gtk::make_managed<Label>(_("Current match color:"), true);
+  Label* const label_current = Gtk::make_managed<Label>(Util::translate_ui("C_urrent match color:"), true);
   label_current->set_halign(Gtk::Align::START);
   table_look->attach(*label_current, 0, 2);
   button_current_color_ = Gtk::make_managed<ColorButton>();
@@ -114,7 +115,7 @@ void PrefDialog::load_xml()
   table_file->set_margin(10);
   table_file->set_column_spacing(12);
   table_file->set_row_spacing(12);
-  notebook->append_page(*table_file, _("_File access"));
+  notebook->append_page(*table_file, Util::translate_ui("_File access"));
 
   Label* const label_utf8 = Gtk::make_managed<Label>("UTF-8");
   table_file->attach(*label_utf8, 0, 0);
@@ -122,13 +123,13 @@ void PrefDialog::load_xml()
   table_file->attach(*label_locale, 0, 1);
 
   Box* const box_fallback = Gtk::make_managed<Box>(Gtk::Orientation::HORIZONTAL, 6);
-  table_file->attach(*box_fallback, 0, 2);
-  Label* const label_fallback = Gtk::make_managed<Label>(_("Fallback encoding:"), true);
+  table_file->attach(*box_fallback, 0, 2, 2, 1);
+  Label* const label_fallback = Gtk::make_managed<Label>(Util::translate_ui("Fallback _encoding:"), true);
   box_fallback->append(*label_fallback);
-  entry_fallback_ = Gtk::make_managed<Entry>();
-  entry_fallback_->set_hexpand(true);
-  box_fallback->append(*entry_fallback_);
-  label_fallback->set_mnemonic_widget(*entry_fallback_);
+  combo_fallback_ = Gtk::make_managed<ComboBoxText>();
+  combo_fallback_->set_hexpand(true);
+  box_fallback->append(*combo_fallback_);
+  label_fallback->set_mnemonic_widget(*combo_fallback_);
 
   Label* const label_lang = Gtk::make_managed<Label>(_("Language:"), true);
   label_lang->set_halign(Gtk::Align::START);
@@ -158,11 +159,8 @@ void PrefDialog::connect_signals()
   button_current_color_->signal_color_set().connect(
       sigc::mem_fun(*this, &PrefDialog::on_current_color_set));
 
-  entry_fallback_->signal_changed().connect(
-      sigc::mem_fun(*this, &PrefDialog::on_entry_fallback_changed));
-
-  entry_fallback_->signal_activate().connect(
-      sigc::mem_fun(*this, &PrefDialog::on_entry_fallback_activate));
+  combo_fallback_->signal_changed().connect(
+      sigc::mem_fun(*this, &PrefDialog::on_fallback_changed));
 
   combo_language_->signal_changed().connect(
       sigc::mem_fun(*this, &PrefDialog::on_language_changed));
@@ -170,9 +168,6 @@ void PrefDialog::connect_signals()
 
 void PrefDialog::on_response(int)
 {
-  if (entry_fallback_changed_)
-    entry_fallback_->activate();
-
   dialog_->hide();
 }
 
@@ -194,13 +189,60 @@ void PrefDialog::on_conf_value_changed(const Glib::ustring& key)
   }
   else if (key.raw() == conf_key_fallback_encoding)
   {
-    entry_fallback_->set_text(settings->get_string(key));
-    entry_fallback_changed_ = false;
+    fill_fallback_combo(settings->get_string(key));
   }
   else if (key.raw() == conf_key_preferred_language)
   {
-    fill_language_combo(settings->get_string(key));
+    fill_language_combo(resolve_language(settings->get_string(key)));
   }
+}
+
+void PrefDialog::fill_fallback_combo(const Glib::ustring& current)
+{
+  static const char* const encodings[] = {
+    "UTF-8", "ISO-8859-1", "ISO-8859-15", "WINDOWS-1252", "IBM850",
+    "ISO-8859-2", "ISO-8859-5", "KOI8-R", "SHIFT_JIS", "EUC-JP",
+    "GB18030", "BIG5", 0
+  };
+  combo_fallback_->remove_all();
+  for (const char* const* p = encodings; *p; ++p)
+    combo_fallback_->append(*p, *p);
+  const Glib::ustring upper = current.uppercase();
+  combo_fallback_->set_active_id(upper);
+  if (combo_fallback_->get_active_row_number() < 0 && !current.empty())
+  {
+    combo_fallback_->prepend(current, current);
+    combo_fallback_->set_active(0);
+  }
+  else if (combo_fallback_->get_active_row_number() < 0)
+  {
+    combo_fallback_->set_active_id("ISO-8859-15");
+  }
+}
+
+Glib::ustring PrefDialog::resolve_language(const Glib::ustring& stored)
+{
+  // Empty = system default: show the actual system language in the combo
+  // so the list never looks empty.
+  if (!stored.empty())
+    return stored;
+  const char* lang = g_getenv("LANGUAGE");
+  if (!lang || !*lang)
+    lang = g_getenv("LANG");
+  Glib::ustring sys = lang ? lang : "";
+  // Keep only the language code part (fr_FR.UTF-8 -> fr, sr@Latn -> sr@Latn).
+  const std::string::size_type dot = sys.raw().find_first_of("._@");
+  // NB: keep "@..." variants (sr@Latn) intact.
+  Glib::ustring code = sys;
+  if (dot != std::string::npos && sys.raw()[dot] != '@')
+    code = sys.substr(0, dot);
+  // Map back to a known code when possible, else fall back to "" (system).
+  for (const auto& entry : available_languages())
+  {
+    if (entry.code == code || entry.code == sys)
+      return entry.code;
+  }
+  return "";
 }
 
 void PrefDialog::fill_language_combo(const Glib::ustring& current)
@@ -257,7 +299,9 @@ void PrefDialog::initialize_configuration()
   for (std::vector<Glib::ustring>::const_iterator p = entries.begin(); p != entries.end(); ++p)
     on_conf_value_changed(*p);
 
-  settings->bind(conf_key_textview_font, button_textview_font_, "font_name");
+  // GTK4 FontButton exposes the "font" property (GSettings key holds a
+  // Pango font description string like "Monospace 10").
+  settings->bind(conf_key_textview_font, button_textview_font_, "font");
 }
 
 void PrefDialog::on_textview_font_set()
@@ -278,21 +322,17 @@ void PrefDialog::on_current_color_set()
   Settings::instance()->set_string(conf_key_current_match_color, value);
 }
 
-void PrefDialog::on_entry_fallback_changed()
+void PrefDialog::on_fallback_changed()
 {
-  entry_fallback_changed_ = true;
-}
+  const Glib::ustring fallback_encoding = combo_fallback_->get_active_id();
 
-void PrefDialog::on_entry_fallback_activate()
-{
-  const Glib::ustring fallback_encoding = entry_fallback_->get_text();
+  if (fallback_encoding.empty())
+    return;
 
   if (Util::validate_encoding(fallback_encoding.raw()))
   {
     Settings::instance()->set_string(conf_key_fallback_encoding,
                                      fallback_encoding.uppercase());
-
-    entry_fallback_changed_ = false;
   }
   else
   {

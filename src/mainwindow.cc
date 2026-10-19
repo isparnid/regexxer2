@@ -46,6 +46,7 @@
 #include <gtkmm/filedialog.h>
 #include <gtkmm/frame.h>
 #include <gtkmm/grid.h>
+#include <gtkmm/image.h>
 #include <gtkmm/label.h>
 #include <gtkmm/paned.h>
 #include <gtkmm/popovermenubar.h>
@@ -62,6 +63,22 @@
 
 namespace
 {
+
+// Small helper: button with a symbolic icon + text label (classic look).
+Gtk::Button* new_icon_button(const Glib::ustring& label, const Glib::ustring& icon_name,
+                             bool use_underline = false)
+{
+  Gtk::Button* const button = Gtk::make_managed<Gtk::Button>();
+  Gtk::Box* const content = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
+  Gtk::Image* const icon = Gtk::make_managed<Gtk::Image>();
+  icon->set_from_icon_name(icon_name);
+  content->append(*icon);
+  Gtk::Label* const text = Gtk::make_managed<Gtk::Label>(label, use_underline);
+  content->append(*text);
+  button->set_child(*content);
+  button->set_tooltip_text(label);
+  return button;
+}
 
 enum { BUSY_GUI_UPDATE_INTERVAL = 16 };
 
@@ -247,7 +264,17 @@ void MainWindow::load_xml()
 {
   window_.reset(new Gtk::Window());
   window_->set_title(PACKAGE_NAME);
-  window_->set_default_size(980, 680);
+
+  // Restore geometry from GSettings (keys already exist in the schema).
+  // Note: Wayland ignores absolute position; size + maximized are restored.
+  {
+    AppSettings& settings = app_settings();
+    const int width = settings.get_int(AppConfig::modern_key_name(AppConfig::window_width), 980);
+    const int height = settings.get_int(AppConfig::modern_key_name(AppConfig::window_height), 680);
+    window_->set_default_size(width, height);
+    if (settings.get_bool(AppConfig::modern_key_name(AppConfig::window_maximized), false))
+      window_->maximize();
+  }
 
   vbox_main_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 0);
   window_->set_child(*vbox_main_);
@@ -258,20 +285,22 @@ void MainWindow::load_xml()
   toolbar_->set_margin(4);
   vbox_main_->append(*toolbar_);
 
-  const auto add_toolbar_button = [this](const Glib::ustring& label, ControlItem& item)
+  const auto add_toolbar_button = [this](const Glib::ustring& label,
+                                          const Glib::ustring& icon_name,
+                                          ControlItem& item)
   {
-    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label);
+    Gtk::Button* const button = new_icon_button(label, icon_name);
     toolbar_->append(*button);
     item.add_widget(*button);
     button->signal_clicked().connect(item.slot());
   };
 
-  add_toolbar_button(_("Save"), controller_.save_file);
-  add_toolbar_button(_("Save all"), controller_.save_all);
+  add_toolbar_button(_("Save"), "document-save", controller_.save_file);
+  add_toolbar_button(_("Save all"), "document-save-as", controller_.save_all);
   toolbar_->append(*Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::VERTICAL));
-  add_toolbar_button(_("Undo"), controller_.undo);
+  add_toolbar_button(_("Undo"), "edit-undo", controller_.undo);
   toolbar_->append(*Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::VERTICAL));
-  add_toolbar_button(_("Quit"), controller_.quit);
+  add_toolbar_button(_("Quit"), "application-exit", controller_.quit);
 
   Gtk::Paned* const work_area = Gtk::make_managed<Gtk::Paned>(Gtk::Orientation::HORIZONTAL);
   work_area->set_vexpand(true);
@@ -299,7 +328,7 @@ void MainWindow::load_xml()
   entry_folder_ = combobox_folder_->get_entry();
   label_folder->set_mnemonic_widget(*combobox_folder_);
 
-  Gtk::Button* const folder_button = Gtk::make_managed<Gtk::Button>(_("Browse…"));
+  Gtk::Button* const folder_button = new_icon_button(_("Browse…"), "folder-open");
   table_file->attach(*folder_button, 2, 0);
   folder_button->signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_select_folder));
 
@@ -325,7 +354,7 @@ void MainWindow::load_xml()
   button_hidden_->set_tooltip_text(_("Also find hidden files"));
   options_box->append(*button_hidden_);
 
-  Gtk::Button* const find_files_button = Gtk::make_managed<Gtk::Button>(_("Find fi_les"), true);
+  Gtk::Button* const find_files_button = new_icon_button(_("Find fi_les"), "system-search", true);
   find_files_button->set_halign(Gtk::Align::END);
   find_files_button->set_hexpand(true);
   controller_.find_files.add_widget(*find_files_button);
@@ -388,7 +417,7 @@ void MainWindow::load_xml()
   entry_substitution_ = comboboxentry_substitution_->get_entry();
   label_replace->set_mnemonic_widget(*comboboxentry_substitution_);
 
-  Gtk::Button* const find_matches_button = Gtk::make_managed<Gtk::Button>(_("Search"));
+  Gtk::Button* const find_matches_button = new_icon_button(_("Search"), "edit-find");
   find_matches_button->set_tooltip_text(_("Find all matches of the regular expression"));
   controller_.find_matches.add_widget(*find_matches_button);
   find_matches_button->signal_clicked().connect(controller_.find_matches.slot());
@@ -422,33 +451,35 @@ void MainWindow::load_xml()
   label_preview->set_mnemonic_widget(*entry_preview_);
 
   const auto add_nav_button = [&](const Glib::ustring& label,
+                                  const Glib::ustring& icon_name,
                                   const Glib::ustring& tooltip, ControlItem& item)
   {
-    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label);
+    Gtk::Button* const button = new_icon_button(label, icon_name);
     button->set_tooltip_text(tooltip);
     item.add_widget(*button);
     button->signal_clicked().connect(item.slot());
     preview_box->append(*button);
   };
-  add_nav_button("|<", _("Go to the previous matching file"), controller_.prev_file);
-  add_nav_button("<",  _("Go to previous match"), controller_.prev_match);
-  add_nav_button(">",  _("Go to next match"), controller_.next_match);
-  add_nav_button(">|", _("Go to the next matching file"), controller_.next_file);
+  add_nav_button("|<", "go-first", _("Go to the previous matching file"), controller_.prev_file);
+  add_nav_button("<", "go-previous", _("Go to previous match"), controller_.prev_match);
+  add_nav_button(">", "go-next", _("Go to next match"), controller_.next_match);
+  add_nav_button(">|", "go-last", _("Go to the next matching file"), controller_.next_file);
 
   Gtk::Box* const replace_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL, 6);
   replace_box->set_halign(Gtk::Align::END);
   vbox_right->append(*replace_box);
 
-  const auto add_replace_button = [&](const Glib::ustring& label, ControlItem& item)
+  const auto add_replace_button = [&](const Glib::ustring& label,
+                                      const Glib::ustring& icon_name, ControlItem& item)
   {
-    Gtk::Button* const button = Gtk::make_managed<Gtk::Button>(label, true);
+    Gtk::Button* const button = new_icon_button(label, icon_name, true);
     item.add_widget(*button);
     button->signal_clicked().connect(item.slot());
     replace_box->append(*button);
   };
-  add_replace_button(_("_Replace"), controller_.replace);
-  add_replace_button(_("_This file"), controller_.replace_file);
-  add_replace_button(_("_All files"), controller_.replace_all);
+  add_replace_button(_("_Replace"), "edit-find-replace", controller_.replace);
+  add_replace_button(_("_This file"), "edit-find-replace", controller_.replace_file);
+  add_replace_button(_("_All files"), "edit-find-replace", controller_.replace_all);
 
   statusline_ = Gtk::make_managed<StatusLine>();
   vbox_main_->append(*statusline_);
@@ -532,8 +563,22 @@ void MainWindow::on_hide()
   }
 }
 
+void MainWindow::save_window_state()
+{
+  AppSettings& settings = app_settings();
+  int width = 0, height = 0;
+  window_->get_default_size(width, height);
+  if (width > 0)
+    settings.set_int(AppConfig::modern_key_name(AppConfig::window_width), width);
+  if (height > 0)
+    settings.set_int(AppConfig::modern_key_name(AppConfig::window_height), height);
+  settings.set_bool(AppConfig::modern_key_name(AppConfig::window_maximized),
+                    window_->is_maximized());
+}
+
 bool MainWindow::on_close_request()
 {
+  save_window_state();
   return !confirm_quit_request();
 }
 
@@ -719,7 +764,7 @@ void MainWindow::on_exec_search()
     return;
   }
 
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     statusline_->set_match_count(buffer->get_original_match_count());
     statusline_->set_match_index(buffer->get_match_index());
@@ -748,7 +793,12 @@ void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
 {
   Regexxer::debug_log("MainWindow::on_filetree_switch_buffer begin (file_index=%d, has_file=%d)",
                       file_index, static_cast<bool>(fileinfo));
-  const FileBufferPtr old_buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer());
+  // The textview may hold a plain Gtk::TextBuffer (e.g. the empty buffer
+  // installed when nothing is selected). Use dynamic cast: a static cast
+  // on a non-FileBuffer yields an invalid pointer -> segfault in
+  // forget_current_match(). This was the crash when clicking through files.
+  const FileBufferPtr old_buffer =
+      std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer());
 
   if (fileinfo && fileinfo->buffer == old_buffer)
     return;
@@ -827,7 +877,7 @@ void MainWindow::on_bound_state_changed()
   // Do not query the editor's previous buffer in that interval.
   if (filetree_->get_selection()->get_selected())
   {
-    if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+    if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
     {
       Regexxer::debug_log("MainWindow::on_bound_state_changed: querying selected FileBuffer state");
       bound &= buffer->get_bound_state();
@@ -850,7 +900,7 @@ void MainWindow::on_filetree_match_count_changed()
 {
   controller_.replace_all.set_enabled(filetree_->get_match_count() > 0);
 
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
     controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
 }
 
@@ -872,7 +922,7 @@ void MainWindow::on_go_next_file(bool move_forward)
 
 void MainWindow::on_go_next(bool move_forward)
 {
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     if (const Glib::RefPtr<Gtk::TextMark> mark = buffer->get_next_match(move_forward))
     {
@@ -890,7 +940,7 @@ void MainWindow::on_go_next(bool move_forward)
 
 void MainWindow::on_replace()
 {
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     buffer->replace_current_match(entry_substitution_->get_text());
     on_go_next(true);
@@ -899,7 +949,7 @@ void MainWindow::on_replace()
 
 void MainWindow::on_replace_file()
 {
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     buffer->replace_all_matches(entry_substitution_->get_text());
     statusline_->set_match_index(0);
@@ -974,7 +1024,7 @@ void MainWindow::on_entry_pattern_changed()
 
 void MainWindow::update_preview()
 {
-  if (const FileBufferPtr buffer = std::static_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
   {
     Glib::ustring preview;
     const int pos = buffer->get_line_preview(entry_substitution_->get_text(), preview);

@@ -60,10 +60,9 @@ private:
   Gtk::FontButton*            button_textview_font_;
   Gtk::ColorButton*           button_match_color_;
   Gtk::ColorButton*           button_current_color_;
-  Gtk::Entry*                 entry_fallback_;
+  Gtk::ComboBoxText*          combo_fallback_;
   Gtk::ComboBoxText*          combo_language_;
   Gtk::Label*                 label_language_hint_;
-  bool                        entry_fallback_changed_;
 
   void load_xml();
   void connect_signals();
@@ -76,13 +75,14 @@ private:
   void on_textview_font_set();
   void on_match_color_set();
   void on_current_color_set();
-  void on_entry_fallback_changed();
-  void on_entry_fallback_activate();
+  void on_fallback_changed();
   void on_language_changed();
 
   struct LanguageEntry { Glib::ustring code; Glib::ustring label; };
   static std::vector<LanguageEntry> available_languages();
+  static Glib::ustring resolve_language(const Glib::ustring& stored);
   void fill_language_combo(const Glib::ustring& current);
+  void fill_fallback_combo(const Glib::ustring& current);
 };
 
 } // namespace Regexxer

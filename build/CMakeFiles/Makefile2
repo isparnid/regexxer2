@@ -64,10 +64,12 @@ CMAKE_BINARY_DIR = /home/daniel/regexxer2/build
 
 # The main recursive "all" target.
 all: CMakeFiles/regexxer2.dir/all
+all: CMakeFiles/regexxer-schema.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
 codegen: CMakeFiles/regexxer2.dir/codegen
+codegen: CMakeFiles/regexxer-schema.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -76,21 +78,22 @@ preinstall:
 
 # The main recursive "clean" target.
 clean: CMakeFiles/regexxer2.dir/clean
+clean: CMakeFiles/regexxer-schema.dir/clean
 .PHONY : clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/regexxer2.dir
 
 # All Build rule for target.
-CMakeFiles/regexxer2.dir/all:
+CMakeFiles/regexxer2.dir/all: CMakeFiles/regexxer-schema.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer2.dir/build.make CMakeFiles/regexxer2.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer2.dir/build.make CMakeFiles/regexxer2.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 "Built target regexxer2"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18 "Built target regexxer2"
 .PHONY : CMakeFiles/regexxer2.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/regexxer2.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/daniel/regexxer2/build/CMakeFiles 17
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/daniel/regexxer2/build/CMakeFiles 18
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/regexxer2.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/daniel/regexxer2/build/CMakeFiles 0
 .PHONY : CMakeFiles/regexxer2.dir/rule
@@ -100,15 +103,47 @@ regexxer2: CMakeFiles/regexxer2.dir/rule
 .PHONY : regexxer2
 
 # codegen rule for target.
-CMakeFiles/regexxer2.dir/codegen:
+CMakeFiles/regexxer2.dir/codegen: CMakeFiles/regexxer-schema.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer2.dir/build.make CMakeFiles/regexxer2.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 "Finished codegen for target regexxer2"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18 "Finished codegen for target regexxer2"
 .PHONY : CMakeFiles/regexxer2.dir/codegen
 
 # clean rule for target.
 CMakeFiles/regexxer2.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer2.dir/build.make CMakeFiles/regexxer2.dir/clean
 .PHONY : CMakeFiles/regexxer2.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/regexxer-schema.dir
+
+# All Build rule for target.
+CMakeFiles/regexxer-schema.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer-schema.dir/build.make CMakeFiles/regexxer-schema.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer-schema.dir/build.make CMakeFiles/regexxer-schema.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=1 "Built target regexxer-schema"
+.PHONY : CMakeFiles/regexxer-schema.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/regexxer-schema.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/daniel/regexxer2/build/CMakeFiles 1
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/regexxer-schema.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/daniel/regexxer2/build/CMakeFiles 0
+.PHONY : CMakeFiles/regexxer-schema.dir/rule
+
+# Convenience name for target.
+regexxer-schema: CMakeFiles/regexxer-schema.dir/rule
+.PHONY : regexxer-schema
+
+# codegen rule for target.
+CMakeFiles/regexxer-schema.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer-schema.dir/build.make CMakeFiles/regexxer-schema.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/daniel/regexxer2/build/CMakeFiles --progress-num=1 "Finished codegen for target regexxer-schema"
+.PHONY : CMakeFiles/regexxer-schema.dir/codegen
+
+# clean rule for target.
+CMakeFiles/regexxer-schema.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/regexxer-schema.dir/build.make CMakeFiles/regexxer-schema.dir/clean
+.PHONY : CMakeFiles/regexxer-schema.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

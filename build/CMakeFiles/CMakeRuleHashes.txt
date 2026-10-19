@@ -1,0 +1,3 @@
+# Hashes of file build rules.
+6ae7f1604c2d12415708d8c62ab232b1 CMakeFiles/regexxer-schema
+807064fcca7a5b04db03eeb5c9b8c5a1 org.regexxer.gschema.xml
