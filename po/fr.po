@@ -508,3 +508,77 @@ msgid ""
 "regexxer attempts to read a file in the following encodings before giving up:"
 msgstr ""
 "regexxer tente de lire un fichier avec le codage suivant avant d'abandonner :"
+
+#: ../src/mainwindow.cc:229
+msgid "Save"
+msgstr "Enregistrer"
+
+#: ../src/mainwindow.cc:230
+msgid "Save all"
+msgstr "Tout enregistrer"
+
+#: ../src/mainwindow.cc:231
+msgid "Quit"
+msgstr "Quitter"
+
+#: ../src/mainwindow.cc:234
+msgid "Undo"
+msgstr "Annuler"
+
+#: ../src/mainwindow.cc:235
+msgid "Cut"
+msgstr "Couper"
+
+#: ../src/mainwindow.cc:236
+msgid "Copy"
+msgstr "Copier"
+
+#: ../src/mainwindow.cc:237
+msgid "Paste"
+msgstr "Coller"
+
+#: ../src/mainwindow.cc:238
+msgid "Delete"
+msgstr "Supprimer"
+
+#: ../src/mainwindow.cc:239
+msgid "Preferences"
+msgstr "Préférences"
+
+#: ../src/mainwindow.cc:241
+msgid "File backward"
+msgstr "Précédent (fichier)"
+
+#: ../src/mainwindow.cc:242
+msgid "Backward"
+msgstr "Précédent"
+
+#: ../src/mainwindow.cc:243
+msgid "Forward"
+msgstr "Suivant"
+
+#: ../src/mainwindow.cc:244
+msgid "File forward"
+msgstr "Suivant (fichier)"
+
+#: ../src/mainwindow.cc:245
+msgid "Replace"
+msgstr "Remplacer"
+
+#: ../src/mainwindow.cc:246
+msgid "This file"
+msgstr "Ce fichier"
+
+#: ../src/mainwindow.cc:247
+msgid "All files"
+msgstr "Tous les fichiers"
+
+#: ../src/mainwindow.cc:250
+msgid "About"
+msgstr "À propos"
+
+#: ../ui/prefdialog.ui.h:17
+msgid ""
+"regexxer attempts to read a file in the following encodings before giving up:"
+msgstr ""
+"regexxer tente de lire un fichier avec le codage suivant avant d'abandonner :"

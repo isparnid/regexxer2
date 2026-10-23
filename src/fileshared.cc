@@ -28,14 +28,23 @@ namespace
 {
 
 static
-const Glib::Quark& file_buffer_match_quark()
+Glib::Quark file_buffer_match_quark()
 {
   // Regexxer::FileBuffer uses anonymous Gtk::TextMark objects to remember
   // the position of matches.  This quark is used to identify a match mark,
   // in order to be able to distinguish it from other anonymous marks.
-
-  static Glib::Quark quark ("regexxer-file-buffer-match-quark");
-  return quark;
+  //
+  // The quark MUST be created via g_quark_from_string() so that it is
+  // properly registered with GObject and returns a value > 0.  Using
+  // Glib::Quark("...") directly can result in a quark with value 0,
+  // which triggers g_object_set_qdata_full assertion failure.
+  //
+  // g_quark_from_string() returns a GQuark (unsigned int) that is always > 0.
+  // Since Glib::Quark has no public constructor that accepts a GQuark, we
+  // build it from the quark's name, which is guaranteed to be registered
+  // and non-empty by g_quark_from_string().
+  static const char* quark_name = "regexxer-file-buffer-match-quark";
+  return Glib::Quark(quark_name);
 }
 
 static
@@ -91,6 +100,9 @@ void MatchData::install_mark(const Gtk::TextBuffer::iterator& pos)
 
   mark = pos.get_buffer()->create_mark(pos, false); // right gravity
 
+  // set_data takes const Quark& (const Glib::Quark&).  Quark is the
+  // derived class of QueryQuark and carries the actual quark id, which is
+  // always > 0 because it is created through g_quark_from_string().
   mark->set_data(file_buffer_match_quark(), this);
 }
 

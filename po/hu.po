@@ -464,4 +464,48 @@ msgid "regexxer attempts to read a file in the following encodings before giving
 msgstr ""
 "A regexxer a következő kódolásokkal próbálja meg beolvasni a fájlokat, "
 "mielőtt feladja:"
+#: ../src/mainwindow.cc:229
+msgid "Save"
+msgstr ""
+
+#: ../src/mainwindow.cc:231
+msgid "Quit"
+msgstr ""
+
+#: ../src/mainwindow.cc:234
+msgid "Undo"
+msgstr ""
+
+#: ../src/mainwindow.cc:235
+msgid "Cut"
+msgstr ""
+
+#: ../src/mainwindow.cc:236
+msgid "Copy"
+msgstr ""
+
+#: ../src/mainwindow.cc:237
+msgid "Paste"
+msgstr ""
+
+#: ../src/mainwindow.cc:238
+msgid "Delete"
+msgstr ""
+
+#: ../src/mainwindow.cc:245
+msgid "Replace"
+msgstr ""
+
+#: ../src/mainwindow.cc:246
+msgid "This file"
+msgstr ""
+
+#: ../src/mainwindow.cc:247
+msgid "All files"
+msgstr ""
+
+#: ../src/mainwindow.cc:250
+msgid "About"
+msgstr ""
+
 

@@ -32,11 +32,16 @@
 #if ENABLE_NLS
 void Util::initialize_gettext(const char* domain, const char* localedir)
 {
+#ifdef ENABLE_NLS
   bindtextdomain(domain, localedir);
 # if HAVE_BIND_TEXTDOMAIN_CODESET
   bind_textdomain_codeset(domain, "UTF-8");
 # endif
   textdomain(domain);
+#else
+  (void) domain;
+  (void) localedir;
+#endif
 }
 #else
 void Util::initialize_gettext(const char*, const char*)

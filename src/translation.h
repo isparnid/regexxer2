@@ -23,6 +23,7 @@
 
 #include <glib.h>
 #include <glibmm/ustring.h>
+#include <string>
 
 #ifndef gettext_noop
 # define gettext_noop(s) (s)

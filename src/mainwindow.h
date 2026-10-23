@@ -156,6 +156,12 @@ private:
   std::unique_ptr<PrefDialog>   pref_dialog_;
   Glib::RefPtr<Gtk::FileDialog> folder_dialog_;
 
+  // Temporary storage for window geometry during save_window_state().
+  int x_;
+  int y_;
+  int width_;
+  int height_;
+
   void load_xml();
   void build_menubar();
   void register_action(const Glib::ustring& name, ControlItem& item,

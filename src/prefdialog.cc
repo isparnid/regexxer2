@@ -236,13 +236,16 @@ Glib::ustring PrefDialog::resolve_language(const Glib::ustring& stored)
   Glib::ustring code = sys;
   if (dot != std::string::npos && sys.raw()[dot] != '@')
     code = sys.substr(0, dot);
-  // Map back to a known code when possible, else fall back to "" (system).
+  // Map back to a known code when possible.
   for (const auto& entry : available_languages())
   {
     if (entry.code == code || entry.code == sys)
       return entry.code;
   }
-  return "";
+
+  // Language not in list: return the system language code so the combo
+  // can show it as the selected item.
+  return code;
 }
 
 void PrefDialog::fill_language_combo(const Glib::ustring& current)
@@ -302,6 +305,13 @@ void PrefDialog::initialize_configuration()
   // GTK4 FontButton exposes the "font" property (GSettings key holds a
   // Pango font description string like "Monospace 10").
   settings->bind(conf_key_textview_font, button_textview_font_, "font");
+
+  if (settings->property_settings_schema().get_value()->has_key(conf_key_textview_font))
+  {
+    const Glib::ustring font = settings->get_string(conf_key_textview_font);
+    if (!font.empty())
+      button_textview_font_->set_font(font);
+  }
 }
 
 void PrefDialog::on_textview_font_set()

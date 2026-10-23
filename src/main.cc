@@ -98,7 +98,12 @@ int main(int argc, char** argv)
     Regexxer::debug_log("application startup (debug=%s)", debug ? "on" : "off");
 
     apply_preferred_language();
-    Util::initialize_gettext(PACKAGE_TARNAME, REGEXXER_LOCALEDIR);
+
+    /* Initialize locale so that gettext() picks up the system default 
+     * (LANG/LANGUAGE environment) when no explicit override is set. */
+    setlocale(LC_ALL, "");
+
+    Util::initialize_gettext(GETTEXT_PACKAGE, REGEXXER_LOCALEDIR);
     Glib::set_application_name(PACKAGE_NAME);
     initialize_configuration();
 
