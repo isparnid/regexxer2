@@ -36,6 +36,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <gio/gio.h>
 
 namespace Gtk
 {
@@ -172,6 +173,12 @@ private:
   void save_window_state();
 
   void on_hide();
+
+  // GTK4 port: restore window geometry once the window is realized.
+  void on_window_realize();
+
+  // GTK4 port: save window geometry when the window is hidden/closed.
+  void save_window_geometry();
   // GTK4 port: style updates are handled by the theme engine.
   // void on_style_updated();
   // GTK4 port: close handling is done via on_close_request().

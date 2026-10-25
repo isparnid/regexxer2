@@ -265,16 +265,13 @@ void MainWindow::load_xml()
   window_.reset(new Gtk::Window());
   window_->set_title(PACKAGE_NAME);
 
-  // Restore geometry from GSettings (keys already exist in the schema).
-  // Note: Wayland ignores absolute position; size + maximized are restored.
-  {
-    AppSettings& settings = app_settings();
-    const int width = settings.get_int(AppConfig::modern_key_name(AppConfig::window_width), 980);
-    const int height = settings.get_int(AppConfig::modern_key_name(AppConfig::window_height), 680);
-    window_->set_default_size(width, height);
-    if (settings.get_bool(AppConfig::modern_key_name(AppConfig::window_maximized), false))
-      window_->maximize();
-  }
+  // Restore geometry from GSettings once the window is realized (after
+  // the native surface exists).  Applying the size here (early) triggered
+  // an assertion "quark > 0" with some recent Pango / Glib versions on
+  // Wayland/X11, because the underlying GObject structures were not
+  // fully initialised yet.
+  window_->signal_realize().connect(
+      sigc::mem_fun(*this, &MainWindow::on_window_realize));
 
   vbox_main_ = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 0);
   window_->set_child(*vbox_main_);
@@ -485,12 +482,30 @@ void MainWindow::load_xml()
   vbox_main_->append(*statusline_);
 }
 
+void MainWindow::on_window_realize()
+{
+  // Restore geometry from GSettings now that the native surface exists.
+  // (Wayland ignores absolute position; size and maximized are restored.)
+  AppSettings& settings = app_settings();
+  const int width = settings.get_int(AppConfig::modern_key_name(AppConfig::window_width), 980);
+  const int height = settings.get_int(AppConfig::modern_key_name(AppConfig::window_height), 680);
+  if (width > 0 && height > 0)
+  {
+    window_->set_default_size(width, height);
+  }
+  if (settings.get_bool(AppConfig::modern_key_name(AppConfig::window_maximized), false))
+  {
+    window_->maximize();
+  }
+}
+
 void MainWindow::connect_signals()
 {
   using sigc::bind;
   using sigc::mem_fun;
 
   window_->signal_hide         ().connect(mem_fun(*this, &MainWindow::on_hide));
+  window_->signal_unmap().connect(mem_fun(*this, &MainWindow::save_window_geometry));
   window_->signal_close_request().connect(mem_fun(*this, &MainWindow::on_close_request), false);
 
   entry_folder_ ->signal_activate().connect(controller_.find_files.slot());
@@ -561,6 +576,21 @@ void MainWindow::on_hide()
   {
     std::unique_ptr<PrefDialog> temp = std::move(pref_dialog_);
   }
+}
+
+void MainWindow::save_window_geometry()
+{
+  // Save the current window geometry (size and maximized state) for
+  // the next run.  This is called when the window is hidden or unmapped,
+  // i.e. when the user closes the application window.
+  int width = 0, height = 0;
+  window_->get_default_size(width, height);
+  if (width > 0)
+    app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_width), width);
+  if (height > 0)
+    app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_height), height);
+  app_settings().set_bool(AppConfig::modern_key_name(AppConfig::window_maximized),
+                          window_->is_maximized());
 }
 
 void MainWindow::save_window_state()
@@ -662,6 +692,8 @@ void MainWindow::on_folder_dialog_done(const Glib::RefPtr<Gio::AsyncResult>& res
 
 void MainWindow::on_find_files()
 {
+  try
+  {
   if (filetree_->get_modified_count() > 0)
   {
     const Glib::ustring message = _("Some files haven't been saved yet.\nContinue anyway?");
@@ -732,10 +764,21 @@ void MainWindow::on_find_files()
   }
 
   statusline_->set_file_count(filetree_->get_file_count());
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("unknown exception escaped file search handler");
+    auto dialog = Regexxer::GtkCompat::make_message_dialog(
+        *window_, _("The file search failed for an unknown reason."),
+        Gtk::MessageType::ERROR, Gtk::ButtonsType::OK, false);
+    Regexxer::GtkCompat::run_dialog(dialog);
+  }
 }
 
 void MainWindow::on_exec_search()
 {
+  try
+  {
   BusyAction busy (*this);
 
   const Glib::ustring regex = entry_regex_->get_text();
@@ -779,94 +822,119 @@ void MainWindow::on_exec_search()
         sigc::mem_fun(*this, &MainWindow::after_exec_search),
         Glib::PRIORITY_HIGH_IDLE + 25); // slightly less than redraw (+20)
   }
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("unknown exception escaped regex search handler");
+    auto dialog = Regexxer::GtkCompat::make_message_dialog(
+        *window_, _("The search failed for an unknown reason."),
+        Gtk::MessageType::ERROR, Gtk::ButtonsType::OK, false);
+    Regexxer::GtkCompat::run_dialog(dialog);
+  }
 }
 
 bool MainWindow::after_exec_search()
 {
-  filetree_->select_first_file();
-  on_go_next(true);
+  try
+  {
+    filetree_->select_first_file();
+    on_go_next(true);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in after_exec_search idle handler");
+  }
 
   return false;
 }
 
 void MainWindow::on_filetree_switch_buffer(FileInfoPtr fileinfo, int file_index)
 {
-  Regexxer::debug_log("MainWindow::on_filetree_switch_buffer begin (file_index=%d, has_file=%d)",
-                      file_index, static_cast<bool>(fileinfo));
-  // The textview may hold a plain Gtk::TextBuffer (e.g. the empty buffer
-  // installed when nothing is selected). Use dynamic cast: a static cast
-  // on a non-FileBuffer yields an invalid pointer -> segfault in
-  // forget_current_match(). This was the crash when clicking through files.
-  const FileBufferPtr old_buffer =
-      std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer());
-
-  if (fileinfo && fileinfo->buffer == old_buffer)
-    return;
-
-  if (old_buffer)
+  try
   {
-    std::for_each(buffer_connections_.begin(), buffer_connections_.end(),
-                  [](sigc::connection& c) { c.disconnect(); });
+    Regexxer::debug_log("MainWindow::on_filetree_switch_buffer begin (file_index=%d, has_file=%d)",
+                        file_index, static_cast<bool>(fileinfo));
+    // The textview may hold a plain Gtk::TextBuffer (e.g. the empty buffer
+    // installed when nothing is selected). Use dynamic cast: a static cast
+    // on a non-FileBuffer yields an invalid pointer -> segfault in
+    // forget_current_match(). This was the crash when clicking through files.
+    const FileBufferPtr old_buffer =
+        std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer());
 
-    buffer_connections_.clear();
-    Regexxer::debug_log("forgetting current match in previous buffer");
-    old_buffer->forget_current_match();
-    Regexxer::debug_log("previous buffer match forgotten");
-  }
+    if (fileinfo && fileinfo->buffer == old_buffer)
+      return;
 
-  if (fileinfo)
-  {
-    const FileBufferPtr buffer = fileinfo->buffer;
-    g_return_if_fail(buffer);
-
-    textview_->set_buffer(buffer);
-    textview_->set_editable(!fileinfo->load_failed);
-    textview_->set_cursor_visible(!fileinfo->load_failed);
-
-    if (!fileinfo->load_failed)
+    if (old_buffer)
     {
-      buffer_connections_.push_back(buffer->signal_modified_changed().
-          connect(sigc::mem_fun(*this, &MainWindow::on_buffer_modified_changed)));
+      std::for_each(buffer_connections_.begin(), buffer_connections_.end(),
+                    [](sigc::connection& c) { c.disconnect(); });
 
-      buffer_connections_.push_back(buffer->signal_bound_state_changed.
-          connect(sigc::mem_fun(*this, &MainWindow::on_bound_state_changed)));
-
-      buffer_connections_.push_back(buffer->signal_preview_line_changed.
-          connect(sigc::mem_fun(*this, &MainWindow::update_preview)));
+      buffer_connections_.clear();
+      Regexxer::debug_log("forgetting current match in previous buffer");
+      old_buffer->forget_current_match();
+      Regexxer::debug_log("previous buffer match forgotten");
     }
 
-    set_title_filename(Util::filename_to_utf8_fallback(fileinfo->fullname));
+    if (fileinfo)
+    {
+      const FileBufferPtr buffer = fileinfo->buffer;
+      g_return_if_fail(buffer);
 
-    controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
-    controller_.save_file.set_enabled(buffer->get_modified());
+      textview_->set_buffer(buffer);
+      textview_->set_editable(!fileinfo->load_failed);
+      textview_->set_cursor_visible(!fileinfo->load_failed);
 
-    statusline_->set_match_count(buffer->get_original_match_count());
-    statusline_->set_match_index(buffer->get_match_index());
-    statusline_->set_file_encoding(fileinfo->encoding);
+      if (!fileinfo->load_failed)
+      {
+        buffer_connections_.push_back(buffer->signal_modified_changed().
+            connect(sigc::mem_fun(*this, &MainWindow::on_buffer_modified_changed)));
+
+        buffer_connections_.push_back(buffer->signal_bound_state_changed.
+            connect(sigc::mem_fun(*this, &MainWindow::on_bound_state_changed)));
+
+        buffer_connections_.push_back(buffer->signal_preview_line_changed.
+            connect(sigc::mem_fun(*this, &MainWindow::update_preview)));
+      }
+
+      set_title_filename(Util::filename_to_utf8_fallback(fileinfo->fullname));
+
+      controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
+      controller_.save_file.set_enabled(buffer->get_modified());
+
+      statusline_->set_match_count(buffer->get_original_match_count());
+      statusline_->set_match_index(buffer->get_match_index());
+      statusline_->set_file_encoding(fileinfo->encoding);
+    }
+    else
+    {
+      textview_->set_buffer(FileBuffer::create());
+      textview_->set_editable(false);
+      textview_->set_cursor_visible(false);
+
+      set_title_filename();
+
+      controller_.replace_file.set_enabled(false);
+      controller_.save_file.set_enabled(false);
+
+      statusline_->set_match_count(0);
+      statusline_->set_match_index(0);
+      statusline_->set_file_encoding("");
+    }
+
+    statusline_->set_file_index(file_index);
+    update_preview();
   }
-  else
+  catch (...)
   {
-    textview_->set_buffer(FileBuffer::create());
-    textview_->set_editable(false);
-    textview_->set_cursor_visible(false);
-
-    set_title_filename();
-
-    controller_.replace_file.set_enabled(false);
-    controller_.save_file.set_enabled(false);
-
-    statusline_->set_match_count(0);
-    statusline_->set_match_index(0);
-    statusline_->set_file_encoding("");
+    Regexxer::debug_log("exception in on_filetree_switch_buffer signal handler");
   }
-
-  statusline_->set_file_index(file_index);
-  update_preview();
 }
 
 void MainWindow::on_bound_state_changed()
 {
-  Regexxer::debug_log("MainWindow::on_bound_state_changed begin");
+  try
+  {
+    Regexxer::debug_log("MainWindow::on_bound_state_changed begin");
   BoundState bound = filetree_->get_bound_state();
 
   controller_.prev_file.set_enabled((bound & BOUND_FIRST) == 0);
@@ -886,32 +954,65 @@ void MainWindow::on_bound_state_changed()
 
   controller_.prev_match.set_enabled((bound & BOUND_FIRST) == 0);
   controller_.next_match.set_enabled((bound & BOUND_LAST)  == 0);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_bound_state_changed signal handler");
+  }
 }
 
 void MainWindow::on_filetree_file_count_changed()
 {
-  const int file_count = filetree_->get_file_count();
+  try
+  {
+    const int file_count = filetree_->get_file_count();
 
-  statusline_->set_file_count(file_count);
-  controller_.find_matches.set_enabled(file_count > 0);
+    statusline_->set_file_count(file_count);
+    controller_.find_matches.set_enabled(file_count > 0);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_filetree_file_count_changed signal handler");
+  }
 }
 
 void MainWindow::on_filetree_match_count_changed()
 {
-  controller_.replace_all.set_enabled(filetree_->get_match_count() > 0);
+  try
+  {
+    controller_.replace_all.set_enabled(filetree_->get_match_count() > 0);
 
-  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
-    controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
+    if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
+      controller_.replace_file.set_enabled(buffer->get_match_count() > 0);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_filetree_match_count_changed signal handler");
+  }
 }
 
 void MainWindow::on_filetree_modified_count_changed()
 {
-  controller_.save_all.set_enabled(filetree_->get_modified_count() > 0);
+  try
+  {
+    controller_.save_all.set_enabled(filetree_->get_modified_count() > 0);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_filetree_modified_count_changed signal handler");
+  }
 }
 
 void MainWindow::on_buffer_modified_changed()
 {
-  controller_.save_file.set_enabled(textview_->get_buffer()->get_modified());
+  try
+  {
+    controller_.save_file.set_enabled(textview_->get_buffer()->get_modified());
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_buffer_modified_changed signal handler");
+  }
 }
 
 void MainWindow::on_go_next_file(bool move_forward)
@@ -1019,46 +1120,70 @@ void MainWindow::undo_stack_clear()
 
 void MainWindow::on_entry_pattern_changed()
 {
-  controller_.find_files.set_enabled(entry_pattern_->get_text_length() > 0);
+  try
+  {
+    controller_.find_files.set_enabled(entry_pattern_->get_text_length() > 0);
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_entry_pattern_changed signal handler");
+  }
 }
 
 void MainWindow::update_preview()
 {
-  if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
+  try
   {
-    Glib::ustring preview;
-    const int pos = buffer->get_line_preview(entry_substitution_->get_text(), preview);
-    entry_preview_->set_text(preview);
-
-    controller_.replace.set_enabled(pos >= 0);
-
-    // Beware, strange code ahead!
-    //
-    // The goal is to scroll the preview entry so that it shows the entire
-    // replaced text if possible.  In order to do that we first move the cursor
-    // to 0, forcing scrolling to the left boundary.  Then we set the cursor to
-    // the end of the replaced text, thus forcing the entry widget to scroll
-    // again.  The replacement should then be entirely visible provided that it
-    // fits into the entry.
-    //
-    // The problem is that Gtk::Entry doesn't update its scroll position
-    // immediately but in an idle handler, thus any calls to set_position()
-    // but the last one have no effect at all.
-    //
-    // To workaround that, we install an idle handler that's executed just
-    // after the entry updated its scroll position, but before redrawing is
-    // done.
-
-    entry_preview_->set_position(0);
-
-    if (pos > 0)
+    if (const FileBufferPtr buffer = std::dynamic_pointer_cast<FileBuffer>(textview_->get_buffer()))
     {
-      Gtk::Entry* const preview_entry = entry_preview_;
+      Glib::ustring preview;
+      const int pos = buffer->get_line_preview(entry_substitution_->get_text(), preview);
+      entry_preview_->set_text(preview);
 
-      Glib::signal_idle().connect(
-          [preview_entry, pos]() -> bool { preview_entry->set_position(pos); return false; },
-          Glib::PRIORITY_HIGH_IDLE + 17); // between scroll update (+ 15) and redraw (+ 20)
+      controller_.replace.set_enabled(pos >= 0);
+
+      // Beware, strange code ahead!
+      //
+      // The goal is to scroll the preview entry so that it shows the entire
+      // replaced text if possible.  In order to do that we first move the cursor
+      // to 0, forcing scrolling to the left boundary.  Then we set the cursor to
+      // the end of the replaced text, thus forcing the entry widget to scroll
+      // again.  The replacement should then be entirely visible provided that it
+      // fits into the entry.
+      //
+      // The problem is that Gtk::Entry doesn't update its scroll position
+      // immediately but in an idle handler, thus any calls to set_position()
+      // but the last one have no effect at all.
+      //
+      // To workaround that, we install an idle handler that's executed just
+      // after the entry updated its scroll position, but before redrawing is
+      // done.
+
+      entry_preview_->set_position(0);
+
+      if (pos > 0)
+      {
+        Gtk::Entry* const preview_entry = entry_preview_;
+
+        Glib::signal_idle().connect(
+            [preview_entry, pos]() -> bool {
+              try
+              {
+                preview_entry->set_position(pos);
+              }
+              catch (...)
+              {
+                Regexxer::debug_log("exception in preview idle handler");
+              }
+              return false;
+            },
+            Glib::PRIORITY_HIGH_IDLE + 17); // between scroll update (+ 15) and redraw (+ 20)
+      }
     }
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in update_preview signal handler");
   }
 }
 
@@ -1106,18 +1231,33 @@ void MainWindow::busy_action_leave()
 
 bool MainWindow::on_busy_action_pulse()
 {
-  g_return_val_if_fail(busy_action_running_, true);
+  try
+  {
+    g_return_val_if_fail(busy_action_running_, true);
 
-  if (!busy_action_cancel_ && (++busy_action_iteration_ % BUSY_GUI_UPDATE_INTERVAL) == 0)
-    statusline_->pulse();
+    if (!busy_action_cancel_ && (++busy_action_iteration_ % BUSY_GUI_UPDATE_INTERVAL) == 0)
+      statusline_->pulse();
 
-  return busy_action_cancel_;
+    return busy_action_cancel_;
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_busy_action_pulse idle handler");
+    return true;
+  }
 }
 
 void MainWindow::on_busy_action_cancel()
 {
-  if (busy_action_running_)
-    busy_action_cancel_ = true;
+  try
+  {
+    if (busy_action_running_)
+      busy_action_cancel_ = true;
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_busy_action_cancel signal handler");
+  }
 }
 
 void MainWindow::on_about()
@@ -1168,9 +1308,11 @@ void MainWindow::on_pref_dialog_hide()
 
 void MainWindow::on_config_changed(const std::string& key)
 {
-  AppSettings& settings = app_settings();
+  try
+  {
+    AppSettings& settings = app_settings();
 
-  if (matches_config_key(key, AppConfig::modern_key_name(AppConfig::textview_font)))
+    if (matches_config_key(key, AppConfig::modern_key_name(AppConfig::textview_font)))
   {
     // GTK4 removed Gtk::TextView::override_font(); apply the font via CSS
     // on the textview's "text" node. Split the Pango font description into
@@ -1186,6 +1328,11 @@ void MainWindow::on_config_changed(const std::string& key)
   // Note: the historical 'toolbar-style' and 'override-direction' keys were
   // removed from the code and the schema; any direct get_string()/get_boolean()
   // on a missing key aborts the process with GLib-GIO-ERROR.
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("exception in on_config_changed signal handler");
+  }
 }
 
 } // namespace Regexxer

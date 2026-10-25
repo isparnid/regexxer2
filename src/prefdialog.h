@@ -64,6 +64,10 @@ private:
   Gtk::ComboBoxText*          combo_language_;
   Gtk::Label*                 label_language_hint_;
 
+  Gtk::Window* parent_window_ = nullptr;
+
+  bool visible_ = false;
+
   void load_xml();
   void connect_signals();
 
@@ -77,6 +81,8 @@ private:
   void on_current_color_set();
   void on_fallback_changed();
   void on_language_changed();
+
+  void refresh_widgets();
 
   struct LanguageEntry { Glib::ustring code; Glib::ustring label; };
   static std::vector<LanguageEntry> available_languages();

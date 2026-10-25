@@ -109,12 +109,20 @@ FileTree::FileTree()
 
 void FileTree::on_settings_changed(const std::string& key)
 {
-  if (key == AppConfig::modern_key_name(AppConfig::fallback_encoding))
-    fallback_encoding_ = app_settings().get_string(key, "ISO-8859-15");
+  try
+  {
+    if (key == AppConfig::modern_key_name(AppConfig::fallback_encoding))
+      fallback_encoding_ = app_settings().get_string(key, "ISO-8859-15");
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_settings_changed: unhandled exception caught");
+  }
 }
 
 FileTree::~FileTree()
-{}
+{
+}
 
 void FileTree::find_files(const std::string& dirname, const Glib::RefPtr<Glib::Regex>& pattern,
                           bool recursive, bool hidden)
@@ -680,8 +688,10 @@ void FileTree::expand_and_select(const Gtk::TreePath& path)
 void FileTree::on_treestore_rows_reordered(const Gtk::TreeModel::Path& path,
                                            const Gtk::TreeModel::iterator& iter, int*)
 {
-  if (sum_matches_ > 0)
+  try
   {
+    if (sum_matches_ > 0)
+    {
     const FileTreeColumns& columns = FileTreeColumns::instance();
     bool bounds_changed = false;
 
@@ -731,6 +741,11 @@ void FileTree::on_treestore_rows_reordered(const Gtk::TreeModel::Path& path,
 
     if (bounds_changed)
       signal_bound_state_changed(); // emit
+    }
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_treestore_rows_reordered: unhandled exception caught");
   }
 }
 
@@ -785,22 +800,31 @@ void FileTree::on_selection_changed()
     }
   }
 
-  if (last_selected_ && last_selected_ != fileinfo &&
-      last_selected_->buffer && last_selected_->buffer->is_freeable())
+  try
   {
-    last_selected_->buffer.reset(); // reduce memory footprint
+    if (last_selected_ && last_selected_ != fileinfo &&
+        last_selected_->buffer && last_selected_->buffer->is_freeable())
+    {
+      last_selected_->buffer.reset(); // reduce memory footprint
+    }
+
+    last_selected_ = fileinfo;
+
+    Regexxer::debug_log("FileTree::on_selection_changed: emit switch-buffer (index=%d)", file_index);
+    signal_switch_buffer(fileinfo, file_index); // emit
+    Regexxer::debug_log("FileTree::on_selection_changed: emit bound-state");
+    signal_bound_state_changed(); // emit
   }
-
-  last_selected_ = fileinfo;
-
-  Regexxer::debug_log("FileTree::on_selection_changed: emit switch-buffer (index=%d)", file_index);
-  signal_switch_buffer(fileinfo, file_index); // emit
-  Regexxer::debug_log("FileTree::on_selection_changed: emit bound-state");
-  signal_bound_state_changed(); // emit
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_selection_changed: unhandled exception caught");
+  }
 }
 
 void FileTree::on_buffer_match_count_changed()
 {
+  try
+  {
   const FileTreeColumns& columns = FileTreeColumns::instance();
 
   // There has to be a selection since we receive signal_match_count_changed()
@@ -884,11 +908,18 @@ void FileTree::on_buffer_match_count_changed()
     }
 
     signal_bound_state_changed(); // emit
+    }
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_buffer_match_count_changed: unhandled exception caught");
   }
 }
 
 void FileTree::on_buffer_modified_changed()
 {
+  try
+  {
   const Gtk::TreeModel::iterator selected = get_selection()->get_selected();
   g_return_if_fail(selected);
 
@@ -899,15 +930,27 @@ void FileTree::on_buffer_modified_changed()
   g_return_if_fail(fileinfo->buffer);
 
   propagate_modified_change(selected, fileinfo->buffer->get_modified());
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_buffer_modified_changed: unhandled exception caught");
+  }
 }
 
 void FileTree::on_buffer_undo_stack_push(UndoActionPtr undo_action)
 {
+  try
+  {
   g_return_if_fail(last_selected_rowref_);
 
   const UndoActionPtr action_shell (new BufferActionShell(*this, last_selected_rowref_, undo_action));
 
   signal_undo_stack_push(action_shell); // emit
+  }
+  catch (...)
+  {
+    Regexxer::debug_log("FileTree::on_buffer_undo_stack_push: unhandled exception caught");
+  }
 }
 
 int FileTree::calculate_file_index(const Gtk::TreeModel::iterator& pos)

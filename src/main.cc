@@ -35,6 +35,7 @@
 #include <clocale>
 #include <exception>
 #include <memory>
+#include <vector>
 
 #include <config.h>
 
@@ -63,10 +64,34 @@ void apply_preferred_language()
           Regexxer::conf_key_preferred_language);
       if (!lang.empty())
       {
-        const std::string value = lang.raw() + ".UTF-8";
-        g_setenv("LANGUAGE", lang.c_str(), TRUE);
-        g_setenv("LANG", value.c_str(), TRUE);
-        setlocale(LC_ALL, "");
+        // Build candidate locale names: try "fr.UTF-8", then "fr_FR.UTF-8",
+        // then fall back to the raw code.  setlocale() fails silently when
+        // the locale is not installed, so we must try several forms.
+        const std::string raw = lang.raw();
+        const std::string upper = Glib::ustring(raw).uppercase().raw();
+        std::vector<std::string> candidates;
+        candidates.push_back(raw + ".UTF-8");
+        candidates.push_back(raw + "_" + upper + ".UTF-8");
+        candidates.push_back(raw);
+
+        bool ok = false;
+        for (const auto& cand : candidates)
+        {
+          g_setenv("LANGUAGE", lang.c_str(), TRUE);
+          g_setenv("LANG", cand.c_str(), TRUE);
+          if (setlocale(LC_ALL, cand.c_str()) != nullptr)
+          {
+            ok = true;
+            break;
+          }
+        }
+
+        if (!ok)
+        {
+          // None of the candidates is installed: keep the system default.
+          g_unsetenv("LANGUAGE");
+          g_unsetenv("LANG");
+        }
       }
     }
   }
@@ -77,8 +102,68 @@ void apply_preferred_language()
 } // anonymous namespace
 
 
+namespace
+{
+
+// Terminate handler: called when an exception escapes a signal handler and
+// std::terminate is invoked.  Try to report the exception type before aborting.
+void terminate_handler()
+{
+  std::exception_ptr eptr = std::current_exception();
+  if (eptr)
+  {
+    try
+    {
+      std::rethrow_exception(eptr);
+    }
+    catch (const std::exception& ex)
+    {
+      g_error("terminate: std::exception: %s", ex.what());
+    }
+    catch (...)
+    {
+      g_error("terminate: unknown exception type");
+    }
+  }
+  else
+  {
+    g_error("terminate: no active exception");
+  }
+  std::abort();
+}
+
+} // anonymous namespace
+
+namespace
+{
+
+// Global log handler: intercept GTK/GLib "unhandled exception in signal
+// handler" errors and demote them to warnings, preventing the application
+// from aborting when a C++ exception escapes a signal handler that we may
+// have missed protecting with try/catch.
+void log_handler(const gchar* log_domain, GLogLevelFlags log_level,
+                 const gchar* message, gpointer user_data)
+{
+  if ((log_level & G_LOG_LEVEL_ERROR) || (log_level & G_LOG_LEVEL_CRITICAL))
+  {
+    if (g_strstr_len(message, -1, "unhandled exception"))
+    {
+      // Demote to warning: log it but don't abort the application.
+      g_log_default_handler(log_domain, G_LOG_LEVEL_WARNING, message, user_data);
+      return;
+    }
+  }
+  g_log_default_handler(log_domain, log_level, message, user_data);
+}
+
+} // anonymous namespace
+
 int main(int argc, char** argv)
 {
+  std::set_terminate(terminate_handler);
+  g_log_set_handler(nullptr,
+                    static_cast<GLogLevelFlags>(G_LOG_LEVEL_ERROR | G_LOG_LEVEL_CRITICAL),
+                    log_handler, nullptr);
   try
   {
     bool debug = false;
@@ -125,15 +210,18 @@ int main(int argc, char** argv)
   catch (const Glib::Error& error)
   {
     const Glib::ustring what = error.what();
-    g_error("unhandled exception: %s", what.c_str());
+    Regexxer::debug_log("unhandled exception: %s", what.c_str());
+    return 1;
   }
   catch (const std::exception& ex)
   {
-    g_error("unhandled exception: %s", ex.what());
+    Regexxer::debug_log("unhandled exception: %s", ex.what());
+    return 1;
   }
   catch (...)
   {
-    g_error("unhandled exception: (type unknown)");
+    Regexxer::debug_log("unhandled exception: (type unknown)");
+    return 1;
   }
 
   return 0;

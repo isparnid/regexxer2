@@ -44,7 +44,18 @@ ControlItem::~ControlItem()
 void ControlItem::activate()
 {
   if (enabled_ && group_enabled_)
-    signal_activate_(); // emit
+  {
+    try
+    {
+      signal_activate_(); // emit
+    }
+    catch (...)
+    {
+      // Prevent exceptions from propagating through GTK signal handlers,
+      // which would cause "unhandled exception in signal handler" criticals.
+      g_warning("Exception caught in ControlItem::activate() signal handler");
+    }
+  }
 }
 
 sigc::slot<void()> ControlItem::slot()
