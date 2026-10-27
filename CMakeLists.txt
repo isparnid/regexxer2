@@ -4,6 +4,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTKMM4 IMPORTED_TARGET REQUIRED gtkmm-4.0)
+find_package(X11 REQUIRED)
 
 add_executable(regexxer2
   src/mainwindow.cc
@@ -24,7 +25,7 @@ add_executable(regexxer2
   src/undostack.cc
 )
 
-target_link_libraries(regexxer2 PRIVATE PkgConfig::GTKMM4 ${SIGC3_LIBRARIES})
+target_link_libraries(regexxer2 PRIVATE PkgConfig::GTKMM4 ${SIGC3_LIBRARIES} X11::X11)
 
 # GSettings schema: generate org.regexxer.gschema.xml from the .in template,
 # compile it for local runs and install it system-wide.

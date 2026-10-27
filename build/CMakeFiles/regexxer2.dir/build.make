@@ -336,6 +336,7 @@ regexxer2: CMakeFiles/regexxer2.dir/src/translation.cc.o
 regexxer2: CMakeFiles/regexxer2.dir/src/undostack.cc.o
 regexxer2: CMakeFiles/regexxer2.dir/build.make
 regexxer2: CMakeFiles/regexxer2.dir/compiler_depend.ts
+regexxer2: /usr/lib/x86_64-linux-gnu/libX11.so
 regexxer2: /usr/lib/x86_64-linux-gnu/libgtkmm-4.0.so
 regexxer2: /usr/lib/x86_64-linux-gnu/libpangomm-2.48.so
 regexxer2: /usr/lib/x86_64-linux-gnu/libgiomm-2.68.so

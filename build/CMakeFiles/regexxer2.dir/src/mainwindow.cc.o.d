@@ -1293,4 +1293,23 @@ CMakeFiles/regexxer2.dir/src/mainwindow.cc.o: \
  /usr/include/gtkmm-4.0/gtkmm/popovermenubar.h \
  /usr/include/gtkmm-4.0/gtkmm/scrolledwindow.h \
  /usr/include/gtkmm-4.0/gtkmm/separator.h \
- /usr/include/gtkmm-4.0/gtkmm/textview.h
+ /usr/include/gtkmm-4.0/gtkmm/textview.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx.h /usr/include/X11/Xlib.h \
+ /usr/include/X11/X.h /usr/include/X11/Xfuncproto.h \
+ /usr/include/X11/Xosdefs.h /usr/include/X11/Xutil.h \
+ /usr/include/X11/keysym.h /usr/include/X11/keysymdef.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11applaunchcontext.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11device.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11device-xi2.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager-xi2.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11display.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11screen.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11dnd.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11glcontext.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11monitor.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11property.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11selection.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11utils.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx11surface.h \
+ /usr/include/gtk-4.0/gdk/x11/gdkx-autocleanups.h

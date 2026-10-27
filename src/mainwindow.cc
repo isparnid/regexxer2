@@ -59,6 +59,11 @@
 #include <algorithm>
 #include <functional>
 
+// GDK X11: nécessaire pour récupérer la position réelle d'une fenêtre de
+// premier niveau (GTK4 n'expose pas d'API portable pour cela).
+#include <gdk/x11/gdkx.h>
+#include <X11/Xlib.h>
+
 #include <config.h>
 
 namespace
@@ -87,6 +92,30 @@ typedef Glib::RefPtr<Regexxer::FileBuffer> FileBufferPtr;
 bool matches_config_key(const std::string& key_name, const std::string& expected_key)
 {
   return key_name == expected_key;
+}
+
+// Obtient la position réelle (en pixels, par rapport à l'écran) de la fenêtre.
+// GTK4 ne fournit pas d'API portable pour cela : sous X11, on interroge Xlib
+// via GDK.  Retourne false si la position n'a pas pu être déterminée.
+static bool window_get_position(Gtk::Window& window, int& x, int& y)
+{
+  x = 0;
+  y = 0;
+  Glib::RefPtr<Gdk::Surface> surface = window.get_surface();
+  if (!surface)
+    return false;
+
+  GdkDisplay* gdk_display = gdk_display_get_default();
+  Display* xdisplay = GDK_DISPLAY_XDISPLAY(gdk_display);
+  Window xwindow = GDK_SURFACE_XID(surface->gobj());
+
+  Window child = None;
+  if (XTranslateCoordinates(xdisplay, xwindow, DefaultRootWindow(xdisplay),
+                            0, 0, &x, &y, &child))
+  {
+    return true;
+  }
+  return false;
 }
 
 class FileErrorDialog : public Gtk::MessageDialog
@@ -486,6 +515,9 @@ void MainWindow::on_window_realize()
 {
   // Restore geometry from GSettings now that the native surface exists.
   // (Wayland ignores absolute position; size and maximized are restored.)
+  // Note: GTK4 does not provide an API to position a top-level window at
+  // absolute coordinates (that is the compositor's domain), so the saved
+  // window-position-x/y are written but not reapplied here.
   AppSettings& settings = app_settings();
   const int width = settings.get_int(AppConfig::modern_key_name(AppConfig::window_width), 980);
   const int height = settings.get_int(AppConfig::modern_key_name(AppConfig::window_height), 680);
@@ -580,8 +612,8 @@ void MainWindow::on_hide()
 
 void MainWindow::save_window_geometry()
 {
-  // Save the current window geometry (size and maximized state) for
-  // the next run.  This is called when the window is hidden or unmapped,
+  // Save the current window geometry (size, position and maximized state)
+  // for the next run.  This is called when the window is hidden or unmapped,
   // i.e. when the user closes the application window.
   int width = 0, height = 0;
   window_->get_default_size(width, height);
@@ -589,6 +621,12 @@ void MainWindow::save_window_geometry()
     app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_width), width);
   if (height > 0)
     app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_height), height);
+  int x = 0, y = 0;
+  if (window_get_position(*window_, x, y))
+  {
+    app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_position_x), x);
+    app_settings().set_int(AppConfig::modern_key_name(AppConfig::window_position_y), y);
+  }
   app_settings().set_bool(AppConfig::modern_key_name(AppConfig::window_maximized),
                           window_->is_maximized());
 }
@@ -602,6 +640,12 @@ void MainWindow::save_window_state()
     settings.set_int(AppConfig::modern_key_name(AppConfig::window_width), width);
   if (height > 0)
     settings.set_int(AppConfig::modern_key_name(AppConfig::window_height), height);
+  int x = 0, y = 0;
+  if (window_get_position(*window_, x, y))
+  {
+    settings.set_int(AppConfig::modern_key_name(AppConfig::window_position_x), x);
+    settings.set_int(AppConfig::modern_key_name(AppConfig::window_position_y), y);
+  }
   settings.set_bool(AppConfig::modern_key_name(AppConfig::window_maximized),
                     window_->is_maximized());
 }

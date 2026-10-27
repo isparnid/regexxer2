@@ -57,8 +57,9 @@ void apply_preferred_language()
   {
     const Glib::RefPtr<Gio::Settings> settings =
         Gio::Settings::create(Regexxer::conf_schema);
-    if (settings->property_settings_schema().get_value()->has_key(
-            Regexxer::conf_key_preferred_language))
+    const Glib::RefPtr<Gio::SettingsSchema> schema =
+        settings->property_settings_schema().get_value();
+    if (schema && schema->has_key(Regexxer::conf_key_preferred_language))
     {
       const Glib::ustring lang = settings->get_string(
           Regexxer::conf_key_preferred_language);
@@ -95,8 +96,14 @@ void apply_preferred_language()
       }
     }
   }
-  catch (...)
-  {}
+  catch (const Glib::Error& ex)
+  {
+    Regexxer::debug_log("apply_preferred_language: %s", ex.what());
+  }
+  catch (const std::exception& ex)
+  {
+    Regexxer::debug_log("apply_preferred_language: %s", ex.what());
+  }
 }
 
 } // anonymous namespace

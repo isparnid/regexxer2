@@ -19,13 +19,18 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-3.31/Modules/CMakeLanguageInformation.cmake"
   "/usr/share/cmake-3.31/Modules/CMakeSystemSpecificInformation.cmake"
   "/usr/share/cmake-3.31/Modules/CMakeSystemSpecificInitialize.cmake"
+  "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake"
+  "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake"
   "/usr/share/cmake-3.31/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
   "/usr/share/cmake-3.31/Modules/Compiler/GNU-C.cmake"
   "/usr/share/cmake-3.31/Modules/Compiler/GNU-CXX.cmake"
   "/usr/share/cmake-3.31/Modules/Compiler/GNU.cmake"
+  "/usr/share/cmake-3.31/Modules/FindFontconfig.cmake"
+  "/usr/share/cmake-3.31/Modules/FindFreetype.cmake"
   "/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake"
   "/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake"
   "/usr/share/cmake-3.31/Modules/FindPkgConfig.cmake"
+  "/usr/share/cmake-3.31/Modules/FindX11.cmake"
   "/usr/share/cmake-3.31/Modules/GNUInstallDirs.cmake"
   "/usr/share/cmake-3.31/Modules/Internal/CMakeCLinkerInformation.cmake"
   "/usr/share/cmake-3.31/Modules/Internal/CMakeCXXLinkerInformation.cmake"
@@ -43,6 +48,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-3.31/Modules/Platform/Linux-Initialize.cmake"
   "/usr/share/cmake-3.31/Modules/Platform/Linux.cmake"
   "/usr/share/cmake-3.31/Modules/Platform/UnixPaths.cmake"
+  "/usr/share/cmake-3.31/Modules/SelectLibraryConfigurations.cmake"
   )
 
 # The corresponding makefile is:

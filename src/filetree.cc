@@ -169,6 +169,14 @@ void FileTree::find_files(const std::string& dirname, const Glib::RefPtr<Glib::R
   {
     find_data.error_list->push_back(error.what()); // collect errors but don't fail
   }
+  catch (const Glib::RegexError& error)
+  {
+    find_data.error_list->push_back(error.what());
+  }
+  catch (const std::exception& error)
+  {
+    find_data.error_list->push_back(error.what());
+  }
 
   signal_bound_state_changed(); // emit
 
@@ -270,20 +278,48 @@ void FileTree::find_matches(const Glib::RefPtr<Glib::Regex>& pattern, bool multi
     ScopedBlockSorting block_sort (*this);
     FindMatchesData find_data (pattern, multiple);
 
-    treestore_->foreach([this, &find_data](const Gtk::TreeModel::Path& path,
-                                           const Gtk::TreeModel::iterator& iter)
+    try
     {
-      return find_matches_at_path_iter(path, iter, find_data);
-    });
+      treestore_->foreach([this, &find_data](const Gtk::TreeModel::Path& path,
+                                             const Gtk::TreeModel::iterator& iter)
+      {
+        // Le callback est invoqué depuis gtk_tree_model_foreach() (C pur) :
+        // aucune exception ne doit en sortir, sinon glibmm logue
+        // "unhandled exception in signal handler" et abort.
+        try
+        {
+          return find_matches_at_path_iter(path, iter, find_data);
+        }
+        catch (const Glib::Error& e)
+        {
+          // fichier illisible / encodage invalide / etc. : on ignore
+          // cette entrée et on poursuit la recherche.
+          //g_debug("find_matches: skipping row: %s", e.what().c_str());
+        }
+        catch (const std::exception& e)
+        {
+          g_debug("find_matches: skipping row: %s", e.what());
+        }
+        catch (...)
+        {
+          g_debug("find_matches: skipping row: unknown exception");
+        }
+        return false; // continuer le foreach
+      });
+    }
+    catch (const std::exception& e)
+    {
+      // Filet de sécurité : ne devrait plus arriver, mais on ne laisse
+      // jamais une exception remonter hors du handler de signal.
+      g_warning("find_matches: %s", e.what());
+    }
+    catch (...)
+    {
+      g_warning("find_matches: unknown exception");
+    }
   }
 
   signal_bound_state_changed(); // emit
-}
-
-long FileTree::get_match_count() const
-{
-  g_return_val_if_fail(sum_matches_ >= 0, 0);
-  return sum_matches_;
 }
 
 void FileTree::replace_all_matches(const Glib::ustring& substitution)
@@ -314,6 +350,12 @@ void FileTree::replace_all_matches(const Glib::ustring& substitution)
   }
 
   signal_bound_state_changed(); // emit
+}
+
+long FileTree::get_match_count() const
+{
+  g_return_val_if_fail(sum_matches_ >= 0, 0);
+  return sum_matches_;
 }
 
 int FileTree::get_modified_count() const
@@ -425,7 +467,19 @@ void FileTree::find_recursively(const std::string& dirname, FindData& find_data)
         {
           const ustring basename_utf8 = Util::filename_to_utf8_fallback(basename);
 
-          if (find_data.pattern->match(basename_utf8))
+          bool matches = false;
+
+          try
+          {
+            matches = find_data.pattern->match(basename_utf8);
+          }
+          catch (const Glib::RegexError& error)
+          {
+            find_data.error_list->push_back(error.what());
+            continue;
+          }
+
+          if (matches)
           {
             Regexxer::debug_log("inserted matching file: '%s'", fullname.c_str());
             find_add_file(basename_utf8, fullname, find_data);

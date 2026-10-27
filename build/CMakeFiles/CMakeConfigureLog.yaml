@@ -564,3 +564,199 @@ events:
       Running the CXX compiler's linker: "/usr/bin/ld" "-v"
       GNU ld (GNU Binutils for Debian) 2.44
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:693 (check_library_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for XOpenDisplay in /usr/lib/x86_64-linux-gnu/libX11.so;/usr/lib/x86_64-linux-gnu/libXext.so"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "X11_LIB_X11_SOLO"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_de7b9/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_de7b9.dir/build.make CMakeFiles/cmTC_de7b9.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT »
+        Building C object CMakeFiles/cmTC_de7b9.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=XOpenDisplay -o CMakeFiles/cmTC_de7b9.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT/CheckFunctionExists.c
+        Linking C executable cmTC_de7b9
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_de7b9.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=XOpenDisplay CMakeFiles/cmTC_de7b9.dir/CheckFunctionExists.c.o -o cmTC_de7b9  /usr/lib/x86_64-linux-gnu/libX11.so /usr/lib/x86_64-linux-gnu/libXext.so
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-d7KxBT »
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:708 (check_function_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for gethostbyname"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_GETHOSTBYNAME"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_9e198/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_9e198.dir/build.make CMakeFiles/cmTC_9e198.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7 »
+        Building C object CMakeFiles/cmTC_9e198.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=gethostbyname -o CMakeFiles/cmTC_9e198.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7/CheckFunctionExists.c
+        Linking C executable cmTC_9e198
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9e198.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=gethostbyname CMakeFiles/cmTC_9e198.dir/CheckFunctionExists.c.o -o cmTC_9e198
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-BHPbJ7 »
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:722 (check_function_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for connect"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_CONNECT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_58e3f/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_58e3f.dir/build.make CMakeFiles/cmTC_58e3f.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S »
+        Building C object CMakeFiles/cmTC_58e3f.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=connect -o CMakeFiles/cmTC_58e3f.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S/CheckFunctionExists.c
+        Linking C executable cmTC_58e3f
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_58e3f.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=connect CMakeFiles/cmTC_58e3f.dir/CheckFunctionExists.c.o -o cmTC_58e3f
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-iMou0S »
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:731 (check_function_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for remove"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_REMOVE"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_199f5/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_199f5.dir/build.make CMakeFiles/cmTC_199f5.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS »
+        Building C object CMakeFiles/cmTC_199f5.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=remove -o CMakeFiles/cmTC_199f5.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS/CheckFunctionExists.c
+        Linking C executable cmTC_199f5
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_199f5.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=remove CMakeFiles/cmTC_199f5.dir/CheckFunctionExists.c.o -o cmTC_199f5
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-u7v6IS »
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckFunctionExists.cmake:93 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:740 (check_function_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for shmat"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_HAVE_SHMAT"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1e4b8/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_1e4b8.dir/build.make CMakeFiles/cmTC_1e4b8.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD »
+        Building C object CMakeFiles/cmTC_1e4b8.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=shmat -o CMakeFiles/cmTC_1e4b8.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD/CheckFunctionExists.c
+        Linking C executable cmTC_1e4b8
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1e4b8.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=shmat CMakeFiles/cmTC_1e4b8.dir/CheckFunctionExists.c.o -o cmTC_1e4b8
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-FxNoBD »
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake-3.31/Modules/CheckLibraryExists.cmake:78 (try_compile)"
+      - "/usr/share/cmake-3.31/Modules/FindX11.cmake:750 (check_library_exists)"
+      - "CMakeLists.txt:7 (find_package)"
+    checks:
+      - "Looking for IceConnectionNumber in ICE"
+    directories:
+      source: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda"
+      binary: "/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda"
+    cmakeVariables:
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_LIB_ICE_HAS_ICECONNECTIONNUMBER"
+      cached: true
+      stdout: |
+        Change Dir: '/home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_1f089/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_1f089.dir/build.make CMakeFiles/cmTC_1f089.dir/build
+        gmake[1] : on entre dans le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda »
+        Building C object CMakeFiles/cmTC_1f089.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=IceConnectionNumber -o CMakeFiles/cmTC_1f089.dir/CheckFunctionExists.c.o -c /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda/CheckFunctionExists.c
+        Linking C executable cmTC_1f089
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1f089.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=IceConnectionNumber CMakeFiles/cmTC_1f089.dir/CheckFunctionExists.c.o -o cmTC_1f089  -lICE
+        gmake[1] : on quitte le répertoire « /home/daniel/regexxer2/build/CMakeFiles/CMakeScratch/TryCompile-KMzqda »
+        
+      exitCode: 0
+...

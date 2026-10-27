@@ -11649,6 +11649,13 @@ CMakeFiles/regexxer2.dir/src/mainwindow.cc.o: /home/daniel/regexxer2/src/mainwin
   /home/daniel/regexxer2/src/stringutils.h \
   /home/daniel/regexxer2/src/translation.h \
   /home/daniel/regexxer2/src/undostack.h \
+  /usr/include/X11/X.h \
+  /usr/include/X11/Xfuncproto.h \
+  /usr/include/X11/Xlib.h \
+  /usr/include/X11/Xosdefs.h \
+  /usr/include/X11/Xutil.h \
+  /usr/include/X11/keysym.h \
+  /usr/include/X11/keysymdef.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
@@ -12350,6 +12357,22 @@ CMakeFiles/regexxer2.dir/src/mainwindow.cc.o: /home/daniel/regexxer2/src/mainwin
   /usr/include/gtk-4.0/gdk/gdkvulkancontext.h \
   /usr/include/gtk-4.0/gdk/version/gdk-visibility.h \
   /usr/include/gtk-4.0/gdk/version/gdkversionmacros.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx-autocleanups.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11applaunchcontext.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11device-xi2.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11device.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager-xi2.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11display.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11dnd.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11glcontext.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11monitor.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11property.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11screen.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11selection.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11surface.h \
+  /usr/include/gtk-4.0/gdk/x11/gdkx11utils.h \
   /usr/include/gtk-4.0/gsk/gpu/gskglrenderer.h \
   /usr/include/gtk-4.0/gsk/gpu/gskvulkanrenderer.h \
   /usr/include/gtk-4.0/gsk/gsk.h \
@@ -18351,7 +18374,6 @@ CMakeFiles/regexxer2.dir/src/undostack.cc.o: /home/daniel/regexxer2/src/undostac
   /usr/lib/x86_64-linux-gnu/sigc++-3.0/include/sigc++config.h
 
 regexxer2: /lib/i386-linux-gnu/libLerc.so.4 \
-  /lib/i386-linux-gnu/libX11.so.6 \
   /lib/i386-linux-gnu/libXau.so.6 \
   /lib/i386-linux-gnu/libXcursor.so.1 \
   /lib/i386-linux-gnu/libXdamage.so.1 \
@@ -18395,7 +18417,6 @@ regexxer2: /lib/i386-linux-gnu/libLerc.so.4 \
   /lib/i386-linux-gnu/libz.so.1 \
   /lib/i386-linux-gnu/libzstd.so.1 \
   /lib/x86_64-linux-gnu/libLerc.so.4 \
-  /lib/x86_64-linux-gnu/libX11.so.6 \
   /lib/x86_64-linux-gnu/libXau.so.6 \
   /lib/x86_64-linux-gnu/libXcursor.so.1 \
   /lib/x86_64-linux-gnu/libXdamage.so.1 \
@@ -18462,7 +18483,6 @@ regexxer2: /lib/i386-linux-gnu/libLerc.so.4 \
   /usr/lib/gcc/x86_64-linux-gnu/14/libgcc_s.so \
   /usr/lib/gcc/x86_64-linux-gnu/14/libstdc++.so \
   /usr/lib/i386-linux-gnu/libLerc.so.4 \
-  /usr/lib/i386-linux-gnu/libX11.so.6 \
   /usr/lib/i386-linux-gnu/libXau.so.6 \
   /usr/lib/i386-linux-gnu/libXcursor.so.1 \
   /usr/lib/i386-linux-gnu/libXdamage.so.1 \
@@ -18505,6 +18525,7 @@ regexxer2: /lib/i386-linux-gnu/libLerc.so.4 \
   /usr/lib/i386-linux-gnu/libxcb.so.1 \
   /usr/lib/i386-linux-gnu/libz.so.1 \
   /usr/lib/i386-linux-gnu/libzstd.so.1 \
+  /usr/lib/x86_64-linux-gnu/libX11.so \
   /usr/lib/x86_64-linux-gnu/libc_nonshared.a \
   /usr/lib/x86_64-linux-gnu/libcairo-gobject.so \
   /usr/lib/x86_64-linux-gnu/libcairo.so \
@@ -18584,9 +18605,9 @@ CMakeFiles/regexxer2.dir/src/completionstack.cc.o:
 
 /usr/lib/x86_64-linux-gnu/libcairo.so:
 
-/usr/lib/i386-linux-gnu/libzstd.so.1:
+/usr/lib/x86_64-linux-gnu/libX11.so:
 
-/usr/lib/i386-linux-gnu/libxcb.so.1:
+/usr/lib/i386-linux-gnu/libzstd.so.1:
 
 /usr/lib/i386-linux-gnu/libxcb-shm.so.0:
 
@@ -18674,8 +18695,6 @@ CMakeFiles/regexxer2.dir/src/completionstack.cc.o:
 
 /lib/x86_64-linux-gnu/libexpat.so.1:
 
-/lib/x86_64-linux-gnu/libepoxy.so.0:
-
 /lib/x86_64-linux-gnu/libdeflate.so.0:
 
 /lib/x86_64-linux-gnu/libcloudproviders.so.0:
@@ -18689,8 +18708,6 @@ CMakeFiles/regexxer2.dir/src/completionstack.cc.o:
 /lib/x86_64-linux-gnu/libXi.so.6:
 
 /lib/x86_64-linux-gnu/libXcursor.so.1:
-
-/lib/x86_64-linux-gnu/libX11.so.6:
 
 /lib/x86_64-linux-gnu/libLerc.so.4:
 
@@ -18755,8 +18772,6 @@ CMakeFiles/regexxer2.dir/src/completionstack.cc.o:
 /usr/include/gtkmm-4.0/gtkmm/viewport.h:
 
 /usr/include/gtkmm-4.0/gtkmm/version.h:
-
-/usr/include/gtkmm-4.0/gtkmm/treemodelfilter.h:
 
 /usr/include/gtkmm-4.0/gtkmm/treelistrow.h:
 
@@ -19035,6 +19050,30 @@ CMakeFiles/regexxer2.dir/src/filetreeprivate.cc.o:
 /usr/include/gtkmm-4.0/gtkmm/applicationwindow.h:
 
 /usr/include/gtkmm-4.0/gtkmm/aboutdialog.h:
+
+/usr/lib/i386-linux-gnu/libxcb.so.1:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11utils.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11surface.h:
+
+/usr/include/gtkmm-4.0/gtkmm/treemodelfilter.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11screen.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11monitor.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11dnd.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11display.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11device.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx-autocleanups.h:
+
+/lib/x86_64-linux-gnu/libepoxy.so.0:
+
+/usr/include/X11/Xlib.h:
 
 /usr/include/gtkmm-4.0/gtkmm/overlay.h:
 
@@ -19471,6 +19510,8 @@ CMakeFiles/regexxer2.dir/src/filetreeprivate.cc.o:
 /usr/lib/x86_64-linux-gnu/crtn.o:
 
 /usr/include/gtkmm-4.0/gdkmm/display.h:
+
+/usr/include/X11/keysymdef.h:
 
 /usr/include/gtkmm-4.0/gtkmm/textbuffer.h:
 
@@ -19996,6 +20037,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 
 /usr/include/glib-2.0/glib/gbacktrace.h:
 
+/usr/include/X11/X.h:
+
 /usr/include/glib-2.0/glib/gasyncqueue.h:
 
 /usr/include/glib-2.0/glib/galloca.h:
@@ -20065,6 +20108,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/gtk-4.0/gtk/gtkactionable.h:
 
 /usr/lib/i386-linux-gnu/libselinux.so.1:
+
+/usr/include/X11/Xfuncproto.h:
 
 /usr/include/glib-2.0/gio/gtlsfiledatabase.h:
 
@@ -20450,6 +20495,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 
 /usr/include/c++/14/bits/stl_algobase.h:
 
+/usr/include/X11/keysym.h:
+
 /usr/include/gtk-4.0/gtk/gtkbookmarklist.h:
 
 /lib/i386-linux-gnu/libXdmcp.so.6:
@@ -20465,6 +20512,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/limits.h:
 
 /usr/include/gtkmm-4.0/gtkmm/assistantpage.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11glcontext.h:
 
 /usr/include/c++/14/functional:
 
@@ -20519,8 +20568,6 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
 
 /usr/lib/i386-linux-gnu/libbz2.so.1.0:
-
-/usr/lib/i386-linux-gnu/libX11.so.6:
 
 /usr/include/c++/14/tr1/beta_function.tcc:
 
@@ -20787,6 +20834,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/c++/14/bits/exception_ptr.h:
 
 /usr/include/gtkmm-4.0/gdkmm/popupsurfaceimpl.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager-xi2.h:
 
 /usr/include/c++/14/bits/hashtable.h:
 
@@ -21110,6 +21159,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 
 /usr/include/c++/14/bits/stl_algo.h:
 
+/usr/include/X11/Xutil.h:
+
 /usr/include/giomm-2.68/giomm/filenamecompleter.h:
 
 /usr/include/c++/14/sstream:
@@ -21119,6 +21170,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/gtk-4.0/gtk/gtkaccelgroup.h:
 
 /usr/include/gtk-4.0/gdk/gdkpopuplayout.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11property.h:
 
 /usr/include/giomm-2.68/giomm/dbusauthobserver.h:
 
@@ -21342,6 +21395,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 
 /usr/include/harfbuzz/hb-unicode.h:
 
+/usr/include/gtk-4.0/gdk/x11/gdkx11device-xi2.h:
+
 /usr/include/gtk-4.0/gdk/gdkkeys.h:
 
 /usr/include/glib-2.0/gio/gsimpleasyncresult.h:
@@ -21369,6 +21424,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/gtk-4.0/gtk/deprecated/gtkappchooser.h:
 
 /usr/include/gtk-4.0/gdk/gdksurface.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11applaunchcontext.h:
 
 /usr/include/gtk-4.0/gtk/deprecated/gtkliststore.h:
 
@@ -21401,6 +21458,8 @@ CMakeFiles/regexxer2.dir/src/main.cc.o:
 /usr/include/gtk-4.0/gdk/gdktypes.h:
 
 /usr/include/gtk-4.0/gdk/gdkvulkancontext.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx.h:
 
 /usr/include/c++/14/bits/version.h:
 
@@ -21692,6 +21751,8 @@ CMakeFiles/regexxer2.dir/src/filetree.cc.o:
 
 /usr/include/gtk-4.0/gtk/gtkdebug.h:
 
+/usr/include/X11/Xosdefs.h:
+
 /usr/include/graphene-1.0/graphene-simd4f.h:
 
 /usr/include/gtk-4.0/gtk/gtkdirectorylist.h:
@@ -21911,8 +21972,6 @@ CMakeFiles/regexxer2.dir/src/filetree.cc.o:
 /usr/include/gtk-4.0/gtk/gtkgestureswipe.h:
 
 /usr/include/gtk-4.0/gtk/gtkpicture.h:
-
-/lib/i386-linux-gnu/libX11.so.6:
 
 /usr/include/gtk-4.0/gtk/gtkpopovermenubar.h:
 
@@ -22308,6 +22367,8 @@ CMakeFiles/regexxer2.dir/src/filetree.cc.o:
 
 /usr/include/x86_64-linux-gnu/bits/byteswap.h:
 
+/usr/include/gtk-4.0/gdk/x11/gdkx11devicemanager.h:
+
 /usr/include/x86_64-linux-gnu/bits/cpu-set.h:
 
 /usr/include/x86_64-linux-gnu/bits/dirent_ext.h:
@@ -22341,6 +22402,8 @@ CMakeFiles/regexxer2.dir/src/filetree.cc.o:
 /usr/include/x86_64-linux-gnu/bits/mathcalls-macros.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/gtk-4.0/gdk/x11/gdkx11selection.h:
 
 /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
