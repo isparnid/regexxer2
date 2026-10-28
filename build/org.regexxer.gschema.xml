@@ -9,104 +9,104 @@
   <schema id="org.regexxer" path="/apps/regexxer/">
     <key name="files-patterns" type="as">
       <default>['*.[ch]','*.{c,cc,cpp,cxx,c++,C,h,hh,hpp,hxx,h++}','*.{ccg,hg}','*.idl','*.{java,jsp}','*.{pl,pm,cgi}','*.py','*.php[0-9]?','*.{html,htm,shtml,js,wml}','*.{xml,xsl,css,dtd,xsd}']</default>
-      <summary>File Patterns</summary>
-      <description>List of pre-defined patterns available in the 'Pattern' entry.</description>
+      <_summary>File Patterns</_summary>
+      <_description>List of pre-defined patterns available in the 'Pattern' entry.</_description>
     </key>
 
     <key name="regex-patterns" type="as">
       <default>[]</default>
-      <summary>Regex Patterns</summary>
-      <description>List of last patterns used in the 'Regex' entry.</description>
+      <_summary>Regex Patterns</_summary>
+      <_description>List of last patterns used in the 'Regex' entry.</_description>
     </key>
 
     <key name="substitution-patterns" type="as">
       <default>[]</default>
-      <summary>Regex Patterns</summary>
-      <description>List of last patterns used in the 'Substitution' entry.</description>
+      <_summary>Regex Patterns</_summary>
+      <_description>List of last patterns used in the 'Substitution' entry.</_description>
     </key>
 
     <key name="textview-font" type="s">
       <default>'Monospace 10'</default>
-      <summary>Text view font</summary>
-      <description>The font used in the file editor.</description>
+      <_summary>Text view font</_summary>
+      <_description>The font used in the file editor.</_description>
     </key>
 
     <key name="match-color" type="s">
       <default>'#9DB8D2'</default>
-      <summary>Match color</summary>
-      <description>The background color used to highlight matches of the search expression.</description>
+      <_summary>Match color</_summary>
+      <_description>The background color used to highlight matches of the search expression.</_description>
     </key>
 
     <key name="current-match-color" type="s">
       <default>'#EED680'</default>
-      <summary>Current-match color</summary>
-      <description>The background color used to highlight the currently selected match of the search expression.</description>
+      <_summary>Current-match color</_summary>
+      <_description>The background color used to highlight the currently selected match of the search expression.</_description>
     </key>
 
     <key name="fallback-encoding" type="s">
       <default>'ISO-8859-15'</default>
-      <summary>Fallback encoding</summary>
-      <description>Name of the character encoding to use if a file is not readable in either UTF-8 or the codeset specified by the current locale. Try "iconv --list" for a complete list of possible values.</description>
+      <_summary>Fallback encoding</_summary>
+      <_description>Name of the character encoding to use if a file is not readable in either UTF-8 or the codeset specified by the current locale. Try "iconv --list" for a complete list of possible values.</_description>
     </key>
 
     <key name="window-width" type="i">
       <default>800</default>
-      <summary>window width</summary>
-      <description>The width of the window.</description>
+      <_summary>window width</_summary>
+      <_description>The width of the window.</_description>
     </key>
 
     <key name="window-height" type="i">
       <default>600</default>
-      <summary>window height</summary>
-      <description>The height of the window.</description>
+      <_summary>window height</_summary>
+      <_description>The height of the window.</_description>
     </key>
 
     <key name="window-position-x" type="i">
       <default>10</default>
-      <summary>window x position</summary>
-      <description>The X coordinate of the window.</description>
+      <_summary>window x position</_summary>
+      <_description>The X coordinate of the window.</_description>
     </key>
 
     <key name="window-position-y" type="i">
       <default>10</default>
-      <summary>window y position</summary>
-      <description>The Y coordinate of the window.</description>
+      <_summary>window y position</_summary>
+      <_description>The Y coordinate of the window.</_description>
     </key>
 
     <key name="window-maximized" type="b">
       <default>false</default>
-      <summary>window maximization</summary>
-      <description>Whether the window is maximized.</description>
+      <_summary>window maximization</_summary>
+      <_description>Whether the window is maximized.</_description>
     </key>
 
     <key name="show-line-numbers" type="b">
       <default>true</default>
-      <summary>Show line numbers</summary>
-      <description>Whether to show the line numbers of the text view.</description>
+      <_summary>Show line numbers</_summary>
+      <_description>Whether to show the line numbers of the text view.</_description>
     </key>
 
     <key name="highlight-current-line" type="b">
       <default>true</default>
-      <summary>Highlight the current line</summary>
-      <description>Whether to highlight the current line of the text view.</description>
+      <_summary>Highlight the current line</_summary>
+      <_description>Whether to highlight the current line of the text view.</_description>
     </key>
 
     <key name="auto-indentation" type="b">
       <default>true</default>
-      <summary>Auto indentation</summary>
-      <description>Whether to enable auto indentation in the text view.</description>
+      <_summary>Auto indentation</_summary>
+      <_description>Whether to enable auto indentation in the text view.</_description>
     </key>
 
     <key name="draw-space" flags="draw-space-flags">
       <default>["space","tab"]</default>
-      <summary>Draw spaces</summary>
-      <description>Which type of space to draw in the text view.</description>
+      <_summary>Draw spaces</_summary>
+      <_description>Which type of space to draw in the text view.</_description>
     </key>
 
     <key name="preferred-language" type="s">
       <default>''</default>
-      <summary>Preferred language</summary>
-      <description>Language code for the user interface (e.g. fr, de). Empty means system default. Requires a restart.</description>
+      <_summary>Preferred language</_summary>
+      <_description>Language code for the user interface (e.g. fr, de). Empty means system default. Requires a restart.</_description>
     </key>
   </schema>
 </schemalist>

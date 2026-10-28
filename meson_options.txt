@@ -1,0 +1,3 @@
+# Options de compilation pour regexxer2 (Meson)
+# Les options buildtype, optimization, werror, warning_level, etc. sont
+# gérées nativement par Meson. Aucune option personnalisée n'est définie.
